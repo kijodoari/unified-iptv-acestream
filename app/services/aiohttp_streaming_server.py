@@ -85,7 +85,13 @@ class AiohttpStreamingServer:
         self.site: Optional[web.TCPSite] = None
     
     async def _fetch_stream_info(self, stream_id: str, extra_params: dict) -> AceStreamInfo:
-        """Fetch stream information from AceStream engine"""
+        """
+        Fetch stream information from AceStream engine
+        Reads no_response_timeout dynamically from config
+        """
+        from app.config import get_config
+        config = get_config()
+        
         temp_pid = str(uuid.uuid4())
         
         url = f"{self.scheme}://{self.acestream_host}:{self.acestream_port}{self.endpoint}"
@@ -97,7 +103,9 @@ class AiohttpStreamingServer:
         
         logger.debug(f"Fetching stream info: {url}?{urlencode(params)}")
         
-        timeout = aiohttp.ClientTimeout(total=self.no_response_timeout)
+        # Read timeout dynamically
+        no_response_timeout = config.acestream_no_response_timeout
+        timeout = aiohttp.ClientTimeout(total=no_response_timeout)
         
         async with self.session.get(url, params=params, timeout=timeout) as response:
             if response.status != 200:
@@ -140,11 +148,19 @@ class AiohttpStreamingServer:
         """
         Fetch stream from AceStream and distribute to all clients
         NATIVE PYACEXY PATTERN: Direct write to StreamResponse (no queues)
+        Reads chunk_size and timeouts dynamically from config
         """
-        logger.info(f"Starting AceStream fetch for {ongoing.stream_id}")
+        from app.config import get_config
+        config = get_config()
+        
+        # Read dynamic settings
+        chunk_size = config.acestream_chunk_size
+        empty_timeout = config.acestream_empty_timeout
+        
+        logger.info(f"Starting AceStream fetch for {ongoing.stream_id} (chunk_size={chunk_size}, empty_timeout={empty_timeout})")
         
         # sock_read timeout (like pyacexy)
-        timeout = aiohttp.ClientTimeout(sock_read=self.empty_timeout)
+        timeout = aiohttp.ClientTimeout(sock_read=empty_timeout)
         
         try:
             logger.debug(f"Connecting to AceStream: {ongoing.acestream.playback_url}")
@@ -163,7 +179,7 @@ class AiohttpStreamingServer:
                 chunk_count = 0
                 last_cleanup = asyncio.get_event_loop().time()
                 
-                async for chunk in ace_response.content.iter_chunked(self.chunk_size):
+                async for chunk in ace_response.content.iter_chunked(chunk_size):
                     if not chunk:
                         break
                     
@@ -233,7 +249,7 @@ class AiohttpStreamingServer:
                             break
                             
         except asyncio.TimeoutError:
-            logger.info(f"Stream {ongoing.stream_id} timed out (no data for {self.empty_timeout}s)")
+            logger.info(f"Stream {ongoing.stream_id} timed out (no data for {empty_timeout}s)")
             ongoing.started.set()
         except Exception as e:
             logger.error(f"Error fetching AceStream: {e}")

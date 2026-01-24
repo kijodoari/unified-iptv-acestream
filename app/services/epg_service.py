@@ -424,7 +424,7 @@ class EPGService:
     async def auto_update_loop(self):
         """
         Automatic EPG update loop
-        Uses XMLTV method if sources are configured, otherwise falls back to database sources
+        Reads EPG sources from database table
         """
         while True:
             try:
@@ -433,16 +433,15 @@ class EPGService:
                 await asyncio.sleep(interval)
                 logger.info("Auto EPG update triggered")
                 
-                # Check if XMLTV sources are configured
-                xmltv_sources = self.config.get_epg_sources_list()
+                # Get EPG sources from database table
+                epg_sources = self.db.query(EPGSource).filter(EPGSource.is_enabled == True).all()
                 
-                if xmltv_sources:
-                    # Use XMLTV update method (xtream_api style)
-                    logger.info("Using XMLTV update method")
+                if epg_sources:
+                    logger.info(f"Found {len(epg_sources)} enabled EPG sources")
                     programs_count = await self.update_all_epg()
-                    logger.info(f"XMLTV EPG update completed: {programs_count} programmes")
+                    logger.info(f"EPG update completed: {programs_count} programmes")
                 else:
-                    logger.info("No XMLTV sources configured, skipping EPG update")
+                    logger.info("No EPG sources configured, skipping EPG update")
                     
             except asyncio.CancelledError:
                 break

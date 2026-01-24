@@ -31,6 +31,8 @@ from app.api import aceproxy
 from app.api import logs
 from app.api import users
 from app.api import settings
+from app.api import scraper
+from app.api import epg
 from app.models import User, ScraperURL, EPGSource, Setting
 from acestream_search import main as engine, get_options, __version__
 
@@ -147,11 +149,9 @@ async def lifespan(app: FastAPI):
                 Setting(key="acestream_no_response_timeout", value=str(config.acestream_no_response_timeout), description="Timeout sin respuesta (segundos)"),
                 
                 # Scraper Configuration
-                Setting(key="scraper_urls", value=",".join(config.get_scraper_urls_list()), description="URLs de fuentes M3U (separadas por comas)"),
                 Setting(key="scraper_update_interval", value=str(config.scraper_update_interval), description="Intervalo de actualización del scraper (segundos)"),
                 
                 # EPG Configuration
-                Setting(key="epg_sources", value=",".join(config.get_epg_sources_list()), description="URLs de fuentes EPG XMLTV (separadas por comas)"),
                 Setting(key="epg_update_interval", value=str(config.epg_update_interval), description="Intervalo de actualización EPG (segundos)"),
                 Setting(key="epg_cache_file", value=config.epg_cache_file, description="Ruta del archivo de cache EPG"),
                 
@@ -281,6 +281,8 @@ app.include_router(aceproxy.router, tags=["AceProxy"])
 app.include_router(logs.router, prefix="/api", tags=["Logs"])
 app.include_router(users.router, prefix="/api", tags=["Users"])
 app.include_router(settings.router, prefix="/api", tags=["Settings"])
+app.include_router(scraper.router, prefix="/api", tags=["Scraper"])
+app.include_router(epg.router, prefix="/api", tags=["EPG"])
 app.include_router(api_endpoints.router, prefix="/api", tags=["API"])
 app.include_router(dashboard.router, tags=["Dashboard"])
 app.include_router(xtream.router, tags=["Xtream API"])  # Last because it catches all paths

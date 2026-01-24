@@ -8,7 +8,8 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - Settings Dinámicos: Inicialización Automática y Configuración en Tiempo Real](#-24-de-enero-de-2026---settings-dinámicos-inicialización-automática-y-configuración-en-tiempo-real)
+1. [24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs](#-24-de-enero-de-2026---settings-dinámicos-completos-y-gestión-profesional-de-urls)
+2. [24 de enero de 2026 - Settings Dinámicos: Inicialización Automática y Configuración en Tiempo Real](#-24-de-enero-de-2026---settings-dinámicos-inicialización-automática-y-configuración-en-tiempo-real)
 2. [24 de enero de 2026 - CRÍTICO: APIs Largas en Background - Servidor NO Bloqueado](#-24-de-enero-de-2026---crítico-apis-largas-en-background---servidor-no-bloqueado)
 3. [24 de enero de 2026 - Corrección: Implementación Real de APIs Faltantes](#-24-de-enero-de-2026---corrección-implementación-real-de-apis-faltantes)
 4. [24 de enero de 2026 - FASE 2.5: Integración Real de Settings con Configuración](#-24-de-enero-de-2026---fase-25-integración-real-de-settings-con-configuración)
@@ -25,6 +26,161 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 15. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
 16. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
 17. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+
+---
+
+## 📅 24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs
+
+### 🎯 Problema/Necesidad
+- Los settings `scraper_urls` y `epg_sources` eran texto plano separado por comas (poco profesional)
+- No se podían agregar múltiples URLs fácilmente
+- Faltaban 6 settings dinámicos adicionales
+- No había gestión individual de fuentes con estadísticas
+
+### ✅ Solución Implementada
+
+#### 1. Gestión Profesional de URLs
+- **Eliminados** `scraper_urls` y `epg_sources` de Settings (22 settings en total ahora)
+- **Creadas** APIs REST completas para gestión de fuentes:
+  - `GET/POST/PUT/DELETE /api/scraper/sources` - Gestión de fuentes M3U
+  - `GET/POST/PUT/DELETE /api/epg/sources` - Gestión de fuentes EPG
+- **Servicios modificados** para leer de tablas ScraperURL y EPGSource
+
+#### 2. Settings Dinámicos Completos (9 total)
+- ✅ `scraper_update_interval` - Ya implementado
+- ✅ `epg_update_interval` - Ya implementado
+- ✅ `server_timezone` - Ya implementado
+- ✅ `epg_cache_file` - NUEVO dinámico
+- ✅ `acestream_timeout` - NUEVO dinámico
+- ✅ `acestream_chunk_size` - NUEVO dinámico
+- ✅ `acestream_empty_timeout` - NUEVO dinámico
+- ✅ `acestream_no_response_timeout` - NUEVO dinámico
+- ✅ `access_token_expire_minutes` - NUEVO dinámico
+
+### 📝 Archivos Creados
+- `app/api/scraper.py` - NUEVO: API completa para gestión de fuentes M3U
+- `app/api/epg.py` - NUEVO: API completa para gestión de fuentes EPG
+- `PLAN-SETTINGS-DINAMICOS-COMPLETO.md` - NUEVO: Plan de implementación completo
+
+### 📝 Archivos Modificados
+- `main.py` - Registrados nuevos routers, eliminados 2 settings obsoletos
+- `app/services/scraper_service.py` - Lee de tabla ScraperURL (ya lo hacía)
+- `app/services/epg_service.py` - Lee de tabla EPGSource en lugar de config
+- `app/services/aceproxy_service.py` - Timeout dinámico en check_stream_availability
+- `app/services/aiohttp_streaming_server.py` - Chunk size y timeouts dinámicos
+- `SETTINGS-DINAMICOS.md` - Actualizado con información completa (9 dinámicos, 13 restart)
+- `API-REFERENCE.md` - Agregadas nuevas APIs de gestión de fuentes
+
+### 🔧 Cambios Técnicos
+
+**1. APIs de Gestión de Fuentes (scraper.py, epg.py)**:
+```python
+# Endpoints implementados:
+GET    /api/scraper/sources          # Listar fuentes M3U
+POST   /api/scraper/sources          # Agregar fuente M3U
+PUT    /api/scraper/sources/{id}     # Actualizar fuente M3U
+DELETE /api/scraper/sources/{id}     # Eliminar fuente M3U
+
+GET    /api/epg/sources              # Listar fuentes EPG
+POST   /api/epg/sources              # Agregar fuente EPG
+PUT    /api/epg/sources/{id}         # Actualizar fuente EPG
+DELETE /api/epg/sources/{id}         # Eliminar fuente EPG
+```
+
+**2. Servicios Leen de Tablas**:
+```python
+# Scraper Service (ya lo hacía correctamente)
+scraper_urls = db.query(ScraperURL).filter(ScraperURL.is_enabled == True).all()
+
+# EPG Service (modificado)
+epg_sources = self.db.query(EPGSource).filter(EPGSource.is_enabled == True).all()
+```
+
+**3. Settings Dinámicos Adicionales**:
+```python
+# AceStream Streaming Server
+config = get_config()
+chunk_size = config.acestream_chunk_size
+empty_timeout = config.acestream_empty_timeout
+no_response_timeout = config.acestream_no_response_timeout
+
+# AceStream Proxy Service
+config = get_config()
+self.timeout = config.acestream_timeout
+
+# Auth Utils
+config = get_config()
+expire_minutes = config.access_token_expire_minutes
+```
+
+### 🧪 Pruebas Realizadas
+
+**1. APIs de Gestión de Fuentes**:
+```bash
+# Listar fuentes
+✅ GET /api/scraper/sources - 1 fuente existente
+✅ GET /api/epg/sources - 1 fuente existente
+
+# Agregar fuentes
+✅ POST /api/scraper/sources - Fuente agregada correctamente
+✅ POST /api/epg/sources - Fuente agregada correctamente
+
+# Actualizar fuentes
+✅ PUT /api/scraper/sources/2 - Deshabilitada correctamente
+
+# Eliminar fuentes
+✅ DELETE /api/scraper/sources/2 - Eliminada correctamente
+✅ DELETE /api/epg/sources/2 - Eliminada correctamente
+```
+
+**2. Settings Totales**:
+```bash
+✅ 22 settings totales (eliminados scraper_urls y epg_sources)
+✅ 9 settings dinámicos funcionando
+✅ 13 settings que requieren restart documentados
+```
+
+**3. Servicios**:
+```bash
+✅ Scraper lee de tabla ScraperURL
+✅ EPG lee de tabla EPGSource
+✅ AceStream usa timeouts dinámicos
+✅ Chunk size dinámico para nuevos streams
+```
+
+### 📦 Despliegue
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
+
+### 🎯 Resultado Final
+
+**Settings**:
+- 22 settings totales (reducidos de 24)
+- 9 dinámicos (aumentados de 3)
+- 13 que requieren restart
+
+**Gestión de URLs**:
+- Sin límite de URLs
+- Gestión individual con estadísticas
+- Habilitar/deshabilitar sin borrar
+- API REST completa
+- Sin comas, sin texto plano
+
+**Beneficios**:
+- ✅ Configuración más profesional
+- ✅ Mayor flexibilidad
+- ✅ Menos reinicios necesarios
+- ✅ Mejor experiencia de usuario
+- ✅ Estadísticas por fuente
+
+### 🔮 Notas Adicionales
+- Los streams activos mantienen su configuración original
+- Nuevos streams usan valores actualizados
+- Los servicios detectan cambios automáticamente
+- No hay riesgo de interrumpir el servicio
 
 ---
 

@@ -1218,3 +1218,224 @@ http://localhost:6880/live/admin/Admin2024!Secure/1.ts
 **Repositorio**: https://github.com/TokyoghoulEs/unified-iptv-acestream  
 **Licencia**: MIT  
 **Versión de la API**: 1.0.0
+
+
+---
+
+## API de Gestión de Fuentes Scraper
+
+### GET /api/scraper/sources
+
+**Descripción**: Listar todas las fuentes M3U del scraper
+
+**Autenticación**: HTTP Basic Auth
+
+**Respuesta**:
+```json
+[
+  {
+    "id": 1,
+    "url": "https://wafy80.github.io/m3u",
+    "is_enabled": true,
+    "last_scraped": "2026-01-24T17:48:02.039668",
+    "channels_found": 150,
+    "created_at": "2026-01-24T12:11:26.995200"
+  }
+]
+```
+
+### POST /api/scraper/sources
+
+**Descripción**: Agregar nueva fuente M3U
+
+**Autenticación**: HTTP Basic Auth
+
+**Body**:
+```json
+{
+  "url": "https://nueva-fuente.com/lista.m3u",
+  "is_enabled": true
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 2,
+  "url": "https://nueva-fuente.com/lista.m3u",
+  "message": "Scraper source created successfully"
+}
+```
+
+### PUT /api/scraper/sources/{source_id}
+
+**Descripción**: Actualizar fuente M3U existente
+
+**Autenticación**: HTTP Basic Auth
+
+**Parámetros**:
+- `source_id` (path): ID de la fuente
+
+**Body**:
+```json
+{
+  "url": "https://fuente-actualizada.com/lista.m3u",
+  "is_enabled": false
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 2,
+  "url": "https://fuente-actualizada.com/lista.m3u",
+  "message": "Scraper source updated successfully"
+}
+```
+
+### DELETE /api/scraper/sources/{source_id}
+
+**Descripción**: Eliminar fuente M3U
+
+**Autenticación**: HTTP Basic Auth
+
+**Parámetros**:
+- `source_id` (path): ID de la fuente
+
+**Respuesta**:
+```json
+{
+  "message": "Scraper source deleted successfully"
+}
+```
+
+---
+
+## API de Gestión de Fuentes EPG
+
+### GET /api/epg/sources
+
+**Descripción**: Listar todas las fuentes EPG XMLTV
+
+**Autenticación**: HTTP Basic Auth
+
+**Respuesta**:
+```json
+[
+  {
+    "id": 1,
+    "url": "https://wafy80.github.io/epg_light.xml",
+    "is_enabled": true,
+    "last_updated": "2026-01-24T17:48:02.976969",
+    "programs_found": 3081,
+    "created_at": "2026-01-24T12:11:27.021741"
+  }
+]
+```
+
+### POST /api/epg/sources
+
+**Descripción**: Agregar nueva fuente EPG
+
+**Autenticación**: HTTP Basic Auth
+
+**Body**:
+```json
+{
+  "url": "https://nueva-fuente.com/epg.xml",
+  "is_enabled": true
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 2,
+  "url": "https://nueva-fuente.com/epg.xml",
+  "message": "EPG source created successfully"
+}
+```
+
+### PUT /api/epg/sources/{source_id}
+
+**Descripción**: Actualizar fuente EPG existente
+
+**Autenticación**: HTTP Basic Auth
+
+**Parámetros**:
+- `source_id` (path): ID de la fuente
+
+**Body**:
+```json
+{
+  "url": "https://fuente-actualizada.com/epg.xml",
+  "is_enabled": false
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 2,
+  "url": "https://fuente-actualizada.com/epg.xml",
+  "message": "EPG source updated successfully"
+}
+```
+
+### DELETE /api/epg/sources/{source_id}
+
+**Descripción**: Eliminar fuente EPG
+
+**Autenticación**: HTTP Basic Auth
+
+**Parámetros**:
+- `source_id` (path): ID de la fuente
+
+**Respuesta**:
+```json
+{
+  "message": "EPG source deleted successfully"
+}
+```
+
+---
+
+## 📝 Notas sobre Gestión de Fuentes
+
+### Ventajas del Nuevo Sistema
+
+1. **Sin límite de URLs**: Agrega tantas fuentes como necesites
+2. **Gestión individual**: Habilita/deshabilita sin borrar
+3. **Estadísticas por fuente**: Última actualización, canales/programas encontrados
+4. **Sin comas**: No necesitas separar URLs con comas
+5. **API REST completa**: CRUD completo para cada fuente
+6. **Sin reinicio**: Los servicios leen de las tablas dinámicamente
+
+### Migración desde Settings
+
+**Antes** (Settings):
+```bash
+# scraper_urls: "https://fuente1.com/m3u,https://fuente2.com/m3u"
+# epg_sources: "https://fuente1.com/epg.xml,https://fuente2.com/epg.xml"
+```
+
+**Ahora** (Tablas):
+```bash
+# Agregar fuentes individualmente
+POST /api/scraper/sources {"url":"https://fuente1.com/m3u"}
+POST /api/scraper/sources {"url":"https://fuente2.com/m3u"}
+POST /api/epg/sources {"url":"https://fuente1.com/epg.xml"}
+POST /api/epg/sources {"url":"https://fuente2.com/epg.xml"}
+```
+
+### Comportamiento de los Servicios
+
+- **Scraper Service**: Lee todas las fuentes habilitadas en cada ciclo de scraping
+- **EPG Service**: Lee todas las fuentes habilitadas en cada actualización de EPG
+- **Detección automática**: Los servicios detectan cambios en las tablas sin reiniciar
+- **Estadísticas**: Se actualizan automáticamente después de cada scraping/actualización
+
+---
+
+**Última actualización**: 24 de enero de 2026  
+**Versión**: 2.0 - Gestión profesional de fuentes

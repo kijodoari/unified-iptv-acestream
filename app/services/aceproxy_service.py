@@ -510,5 +510,20 @@ class AceProxyService:
                 logger.info(f"Forcibly closed stream {stream_id}")
 
     async def check_stream_availability(self, stream_id: str) -> bool:
-        """Alias for check_stream_available for API compatibility"""
-        return await self.check_stream_available(stream_id)
+        """
+        Alias for check_stream_available for API compatibility
+        Reads timeout dynamically from config
+        """
+        from app.config import get_config
+        config = get_config()
+        
+        # Update timeout dynamically
+        original_timeout = self.timeout
+        self.timeout = config.acestream_timeout
+        
+        try:
+            result = await self.check_stream_available(stream_id)
+            return result
+        finally:
+            # Restore original timeout
+            self.timeout = original_timeout
