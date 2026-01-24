@@ -511,8 +511,8 @@ class AceProxyService:
 
     async def check_stream_availability(self, stream_id: str) -> bool:
         """
-        Check if a stream is available and PROPERLY CLOSE the session
-        Reads timeout dynamically from config
+        Check if a stream is available using LIGHTWEIGHT API method
+        Uses get_media_files which doesn't start a streaming session
         """
         from app.config import get_config
         config = get_config()
@@ -522,28 +522,32 @@ class AceProxyService:
         self.timeout = config.acestream_timeout
         
         try:
-            # Fetch stream info (this creates a session)
-            acestream_info = await self._fetch_stream_info(stream_id)
+            # Use lightweight API method that doesn't start streaming
+            url = f"{self.base_url}/server/api"
+            params = {
+                'method': 'get_media_files',
+                'api_version': '3',
+                'content_id': stream_id
+            }
             
-            # CRITICAL: Stop the session immediately to free the connection
-            try:
-                stop_url = f"{acestream_info.command_url}?method=stop"
-                timeout = aiohttp.ClientTimeout(total=5)
-                async with self.session.get(stop_url, timeout=timeout) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data.get('error'):
-                            logger.debug(f"Stop returned error: {data['error']}")
-                    logger.debug(f"Stream {stream_id} session stopped successfully")
-            except Exception as e:
-                logger.warning(f"Error stopping stream {stream_id}: {e}")
+            timeout = aiohttp.ClientTimeout(total=self.timeout)
             
-            # Small delay to ensure AceStream processes the stop
-            await asyncio.sleep(0.5)
-            
-            return True
+            async with self.session.get(url, params=params, timeout=timeout) as response:
+                if response.status != 200:
+                    return False
+                
+                data = await response.json()
+                
+                # Check if we got valid result with files
+                if 'result' in data and 'files' in data['result']:
+                    files = data['result']['files']
+                    return bool(files and len(files) > 0)
+                
+                return False
+                
+        except asyncio.TimeoutError:
+            return False
         except Exception as e:
-            logger.debug(f"Stream {stream_id} not available: {e}")
             return False
         finally:
             # Restore original timeout
