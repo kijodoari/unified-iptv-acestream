@@ -8,8 +8,9 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - Verificación Completa y Documentación de Todas las APIs](#-24-de-enero-de-2026---verificación-completa-y-documentación-de-todas-las-apis)
-2. [24 de enero de 2026 - FASE 2: Implementación de Settings Management](#-24-de-enero-de-2026---fase-2-implementación-de-settings-management)
+1. [24 de enero de 2026 - Cambio de Nomenclatura: IPTV → AceStream](#-24-de-enero-de-2026---cambio-de-nomenclatura-iptv--acestream)
+2. [24 de enero de 2026 - Verificación Completa y Documentación de Todas las APIs](#-24-de-enero-de-2026---verificación-completa-y-documentación-de-todas-las-apis)
+3. [24 de enero de 2026 - FASE 2: Implementación de Settings Management](#-24-de-enero-de-2026---fase-2-implementación-de-settings-management)
 3. [24 de enero de 2026 - Corrección: Campos Faltantes en Modal de Edición de Usuario](#-24-de-enero-de-2026---corrección-campos-faltantes-en-modal-de-edición-de-usuario)
 4. [24 de enero de 2026 - Pruebas Exhaustivas de API User Management](#-24-de-enero-de-2026---pruebas-exhaustivas-de-api-user-management)
 5. [24 de enero de 2026 - FASE 1: Implementación de User Management](#-24-de-enero-de-2026---fase-1-implementación-de-user-management)
@@ -20,6 +21,85 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 9. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
 10. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
 11. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+
+---
+
+## 📅 24 de enero de 2026 - Cambio de Nomenclatura: IPTV → AceStream
+
+### 🎯 Problema/Necesidad
+El proyecto usa "IPTV" en varios lugares cuando debería usar "AceStream" para reflejar correctamente la tecnología principal del proyecto.
+
+### ✅ Solución Implementada
+Cambio sistemático de todas las referencias "IPTV" por "AceStream" en archivos de configuración y base de datos.
+
+### 📝 Archivos Modificados
+- `.env` - Cambiado nombre de base de datos
+- `.env.example` - Cambiado nombre de base de datos
+- `docker-compose.yml` - Cambiado nombre del servicio
+- `Dockerfile` - Agregado upgrade de pip
+- `data/unified-iptv.db` → `data/unified-acestream.db` - Base de datos renombrada
+
+### 🔧 Cambios Técnicos
+
+**Archivos de Configuración**:
+```yaml
+# Antes
+services:
+  unified-iptv:
+    ...
+
+# Después
+services:
+  unified-acestream:
+    ...
+```
+
+**Base de Datos**:
+```bash
+# Antes
+DATABASE_URL=sqlite:///data/unified-iptv.db
+
+# Después
+DATABASE_URL=sqlite:///data/unified-acestream.db
+```
+
+**Dockerfile - Actualización de pip**:
+```dockerfile
+# Antes
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Después
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+```
+
+**Archivo Físico**:
+- Renombrado: `unified-iptv.db` → `unified-acestream.db`
+
+### 🧪 Verificación
+
+**Comandos de Docker actualizados**:
+```bash
+# Antes
+docker-compose logs unified-iptv
+
+# Después
+docker-compose logs unified-acestream
+```
+
+### 📦 Despliegue
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
+
+### 🔮 Notas Adicionales
+
+- El nombre del repositorio sigue siendo `unified-iptv-acestream` (correcto)
+- El nombre del proyecto ahora es consistente: "Unified AceStream Platform"
+- Todos los valores internos ahora usan "AceStream" en lugar de "IPTV"
+- La base de datos se renombró sin pérdida de datos
 
 ---
 
