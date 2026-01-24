@@ -43,7 +43,7 @@
 
 **Objetivo**: Implementar settings dinámicos y gestión profesional de URLs
 
-### ✅ Fases Completadas: 8/8 (100%)
+### ✅ Fases Completadas: 9/9 (100%)
 
 #### FASE 1: APIs para Gestión de URLs ✅
 **Estado**: COMPLETADA
@@ -120,9 +120,25 @@
 - `037ab0e` - "Documentación FASE 8"
 - `ebdc637` - "Actualización SETTINGS-DINAMICOS.md"
 
+#### FASE 9: Autenticación de Admin desde User Table ✅
+**Estado**: COMPLETADA
+**Fecha**: 24 de enero de 2026
+**Contenido**:
+- ✅ Dashboard autentica contra tabla User (no contra config)
+- ✅ Eliminado admin_username de Settings
+- ✅ Control total sobre username del admin
+- ✅ Control total sobre password del admin
+- ✅ Validación de unicidad de username
+- ✅ Base de datos prevalece sobre .env
+- ✅ Corrección adicional: EPG gzip detection automática
+**Commits**:
+- `8a8f3d0` - "FASE 9: Autenticación de Admin desde User Table" (inicial)
+- `c5d3093` - "Fix bcrypt compatibility warning"
+- `53d10a5` - "FASE 9 COMPLETADA: Control total sobre credenciales admin + Corrección EPG gzip detection"
+
 ### ✅ Fases Pendientes: 0
 
-**Todas las fases de este plan están completadas.**
+**Todas las fases de este plan están completadas al 100%.**
 
 ---
 
@@ -130,13 +146,13 @@
 
 ### Planes Totales: 2
 - ⚠️ PLAN-IMPLEMENTACION.md - 25% completado (2/8 fases)
-- ✅ PLAN-SETTINGS-DINAMICOS-COMPLETO.md - 100% completado (8/8 fases)
+- ✅ PLAN-SETTINGS-DINAMICOS-COMPLETO.md - 100% completado (9/9 fases)
 
-### Fases Totales: 16
-- ✅ Completadas: 10 (62.5%)
-- ❌ Pendientes: 6 (37.5%)
+### Fases Totales: 17
+- ✅ Completadas: 11 (64.7%)
+- ❌ Pendientes: 6 (35.3%)
 
-### Estado General: ⚠️ EN PROGRESO (62.5% completado)
+### Estado General: ⚠️ EN PROGRESO (64.7% completado)
 
 ---
 
@@ -150,13 +166,15 @@
 
 ### Del PLAN-SETTINGS-DINAMICOS-COMPLETO.md:
 1. ✅ 9 settings dinámicos (sin reiniciar)
-2. ✅ 13 settings que requieren restart
+2. ✅ 12 settings que requieren restart
 3. ✅ Gestión profesional de URLs (ScraperURL, EPGSource)
 4. ✅ APIs REST para gestión de fuentes
 5. ✅ Sistema de colores en panel web (verde/amarillo/gris)
 6. ✅ Auditoría completa y correcciones aplicadas
 7. ✅ 95.5% de implementación real verificada
 8. ✅ Sistema inteligente de soft delete (mejor que el plan original)
+9. ✅ Control total sobre credenciales admin (username + password)
+10. ✅ EPG con detección automática de compresión
 
 ---
 
@@ -248,7 +266,7 @@ Aunque todos los planes actuales están completados, posibles mejoras futuras:
 - ❌ 6 fases pendientes (EPG Management, Scraper Management, VOD, Series, etc.)
 
 ### Plan 2: PLAN-SETTINGS-DINAMICOS-COMPLETO.md
-- ✅ 8/8 fases completadas (100%)
+- ✅ 9/9 fases completadas (100%)
 - ✅ Plan completado exitosamente
 
 **Funcionalidades Implementadas**:
@@ -262,14 +280,16 @@ Aunque todos los planes actuales están completados, posibles mejoras futuras:
 - ✅ Documentación exhaustiva
 - ✅ Código auditado y corregido
 - ✅ 95.5% de implementación real
+- ✅ Control total sobre credenciales admin
+- ✅ EPG con detección automática de compresión
 
 **Pendiente**:
 - ❌ 6 fases del plan de implementación general (EPG Management, Scraper Management, VOD, Series, EPG Update Trigger, Channel Status Check)
 
-**Estado del Proyecto**: ⚠️ EN DESARROLLO (62.5% completado)
+**Estado del Proyecto**: ⚠️ EN DESARROLLO (64.7% completado)
 
 ---
 
 **Última actualización**: 24 de enero de 2026
 **Verificado por**: Kiro AI Assistant
-**Estado**: ✅ 10/16 FASES COMPLETADAS (62.5%)
+**Estado**: ✅ 11/17 FASES COMPLETADAS (64.7%)

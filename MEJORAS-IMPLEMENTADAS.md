@@ -8,26 +8,196 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - FASE 8: Auditoría y Corrección Completa de Implementación de Settings](#-24-de-enero-de-2026---fase-8-auditoría-y-corrección-completa-de-implementación-de-settings)
-2. [24 de enero de 2026 - Sistema de Colores para Settings: Dinámicos, Restart y ReadOnly](#-24-de-enero-de-2026---sistema-de-colores-para-settings-dinámicos-restart-y-readonly)
-3. [24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs](#-24-de-enero-de-2026---settings-dinámicos-completos-y-gestión-profesional-de-urls)
-3. [24 de enero de 2026 - Settings Dinámicos: Inicialización Automática y Configuración en Tiempo Real](#-24-de-enero-de-2026---settings-dinámicos-inicialización-automática-y-configuración-en-tiempo-real)
-2. [24 de enero de 2026 - CRÍTICO: APIs Largas en Background - Servidor NO Bloqueado](#-24-de-enero-de-2026---crítico-apis-largas-en-background---servidor-no-bloqueado)
-3. [24 de enero de 2026 - Corrección: Implementación Real de APIs Faltantes](#-24-de-enero-de-2026---corrección-implementación-real-de-apis-faltantes)
-4. [24 de enero de 2026 - FASE 2.5: Integración Real de Settings con Configuración](#-24-de-enero-de-2026---fase-25-integración-real-de-settings-con-configuración)
-5. [24 de enero de 2026 - Cambio de Nomenclatura: IPTV → AceStream](#-24-de-enero-de-2026---cambio-de-nomenclatura-iptv--acestream)
-6. [24 de enero de 2026 - Verificación Completa y Documentación de Todas las APIs](#-24-de-enero-de-2026---verificación-completa-y-documentación-de-todas-las-apis)
-7. [24 de enero de 2026 - FASE 2: Implementación de Settings Management](#-24-de-enero-de-2026---fase-2-implementación-de-settings-management)
-8. [24 de enero de 2026 - Corrección: Campos Faltantes en Modal de Edición de Usuario](#-24-de-enero-de-2026---corrección-campos-faltantes-en-modal-de-edición-de-usuario)
-9. [24 de enero de 2026 - Pruebas Exhaustivas de API User Management](#-24-de-enero-de-2026---pruebas-exhaustivas-de-api-user-management)
-10. [24 de enero de 2026 - FASE 1: Implementación de User Management](#-24-de-enero-de-2026---fase-1-implementación-de-user-management)
-11. [24 de enero de 2026 - Implementación de Reproductor HLS en el Navegador](#-24-de-enero-de-2026---implementación-de-reproductor-hls-en-el-navegador)
-12. [24 de enero de 2026 - Creación de Guía de Ejemplos Prácticos de Uso](#-24-de-enero-de-2026---creación-de-guía-de-ejemplos-prácticos-de-uso)
-13. [24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso](#-24-de-enero-de-2026---corrección-de-interfaz-de-reproducción-y-documentación-de-acceso)
-14. [24 de enero de 2026 - Corrección de Configuración de Streaming en Docker](#-24-de-enero-de-2026---corrección-de-configuración-de-streaming-en-docker)
-15. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
-16. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
-17. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+1. [24 de enero de 2026 - FASE 9 COMPLETADA: Control Total sobre Credenciales Admin + Corrección EPG](#-24-de-enero-de-2026---fase-9-completada-control-total-sobre-credenciales-admin--corrección-epg)
+2. [24 de enero de 2026 - FASE 8: Auditoría y Corrección Completa de Implementación de Settings](#-24-de-enero-de-2026---fase-8-auditoría-y-corrección-completa-de-implementación-de-settings)
+3. [24 de enero de 2026 - Sistema de Colores para Settings: Dinámicos, Restart y ReadOnly](#-24-de-enero-de-2026---sistema-de-colores-para-settings-dinámicos-restart-y-readonly)
+4. [24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs](#-24-de-enero-de-2026---settings-dinámicos-completos-y-gestión-profesional-de-urls)
+
+---
+
+## 📅 24 de enero de 2026 - FASE 9 COMPLETADA: Control Total sobre Credenciales Admin + Corrección EPG
+
+### 🎯 Problema/Necesidad
+
+**Problema 1 - Credenciales Admin**:
+Tras implementar la autenticación del dashboard contra la tabla User (FASE 9 inicial), se detectó que el panel de Users NO permitía cambiar el username del admin, solo el password. Esto limitaba el control total sobre las credenciales del administrador.
+
+**Problema 2 - Warning EPG**:
+El servicio EPG generaba un warning innecesario al intentar descomprimir archivos XML que no estaban comprimidos:
+```
+WARNING - Failed to decompress, trying as plain text: Not a gzipped file (b'<?')
+```
+
+### ✅ Solución 1: Edición Completa de Usuario Admin
+
+#### Backend - API Users
+
+**Archivo**: `app/api/users.py`
+
+**Cambios**:
+```python
+# Modelo UserUpdate - Agregado campo username
+class UserUpdate(BaseModel):
+    username: Optional[str] = None  # ← NUEVO
+    password: Optional[str] = None
+    email: Optional[EmailStr] = None
+    # ... resto de campos
+
+# Endpoint PUT /api/users/{id} - Validación de username
+@router.put("/users/{user_id}")
+async def update_user(user_id: int, user_data: UserUpdate, db: Session):
+    # Validar que username no exista para otro usuario
+    if user_data.username is not None:
+        existing = db.query(User).filter(
+            User.username == user_data.username,
+            User.id != user_id
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already exists")
+        user.username = user_data.username
+```
+
+**Validaciones implementadas**:
+- ✅ Verifica que username no esté en uso por otro usuario
+- ✅ Permite cambiar username del mismo usuario
+- ✅ Actualiza username en base de datos
+- ✅ Mantiene integridad referencial
+
+#### Frontend - Template Users
+
+**Archivo**: `app/templates/users.html`
+
+**Cambios en función `editUser()`**:
+```javascript
+// Agregado campo username en modal
+<div class="mb-3">
+    <label class="form-label">Username</label>
+    <input type="text" class="form-control" id="editUsername" value="${user.username}">
+</div>
+```
+
+**Cambios en función `saveUser()`**:
+```javascript
+// Incluir username en datos a enviar
+const data = {
+    username: document.getElementById('editUsername').value,  // ← NUEVO
+    email: document.getElementById('editEmail').value || null,
+    password: document.getElementById('editPassword').value || null,
+    // ... resto de campos
+};
+```
+
+### ✅ Solución 2: Detección Automática de Archivos Gzipped
+
+**Archivo**: `app/services/epg_service.py`
+
+**Problema anterior**:
+```python
+# Intentaba descomprimir siempre si is_gzipped=True
+if is_gzipped:
+    try:
+        content = gzip.decompress(content)
+    except Exception as e:
+        logger.warning(f"Failed to decompress, trying as plain text: {e}")
+```
+
+**Solución implementada**:
+```python
+# Auto-detecta por magic bytes (1f 8b = gzip)
+if len(content) >= 2 and content[:2] == b'\x1f\x8b':
+    # File is gzipped (magic bytes 1f 8b)
+    try:
+        content = gzip.decompress(content)
+        logger.debug(f"Decompressed gzipped EPG from {url}")
+    except Exception as e:
+        logger.error(f"Failed to decompress gzipped file: {e}")
+        return None
+elif is_gzipped:
+    # User expected gzipped but it's not, just use as-is
+    logger.debug(f"EPG from {url} is not gzipped, using as plain text")
+```
+
+**Mejoras**:
+- ✅ Detección automática por magic bytes (`\x1f\x8b`)
+- ✅ No más warnings innecesarios
+- ✅ Funciona con archivos comprimidos y sin comprimir
+- ✅ Logs más limpios (debug en lugar de warning)
+
+### 📝 Archivos Modificados
+
+1. **app/api/users.py**
+   - Línea 28: Agregado `username: Optional[str] = None` a UserUpdate
+   - Líneas 175-185: Validación y actualización de username en update_user()
+
+2. **app/templates/users.html**
+   - Líneas 220-224: Campo username en modal de edición
+   - Línea 280: Incluir username en datos de saveUser()
+
+3. **app/services/epg_service.py**
+   - Líneas 168-190: Detección automática de gzip por magic bytes
+   - Eliminado warning innecesario
+
+### 🧪 Funcionalidad Implementada
+
+**Control total sobre credenciales admin**:
+1. ✅ Editar username desde Users panel
+2. ✅ Cambiar password desde Users panel
+3. ✅ Cambiar ambos (username + password) simultáneamente
+4. ✅ Sistema valida que username no esté duplicado
+5. ✅ Dashboard autentica contra tabla User (base de datos prevalece)
+
+**Flujo completo**:
+1. Usuario hace login con credenciales actuales
+2. Va al panel de Users
+3. Edita su usuario (botón lápiz)
+4. Cambia username y/o password
+5. Guarda cambios
+6. Próximo login usa nuevas credenciales
+
+**EPG mejorado**:
+- ✅ Detección automática de compresión
+- ✅ Sin warnings innecesarios
+- ✅ Logs más limpios
+- ✅ Funciona con cualquier formato (gzipped o plain text)
+
+### 📦 Despliegue
+
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+
+# Verificación
+curl http://localhost:6880/health
+# {"status":"healthy","services":{"aceproxy":true,"scraper":true,"epg":true},"aceproxy_streams":0}
+
+# Verificar logs EPG (sin warnings)
+docker-compose logs unified-acestream | grep -i "epg\|gzip"
+```
+
+### 🔮 Resultado Final
+
+**FASE 9 - 100% COMPLETADA**:
+- ✅ Control total sobre username del admin
+- ✅ Control total sobre password del admin
+- ✅ Validación de unicidad de username
+- ✅ Base de datos prevalece sobre .env
+- ✅ Autenticación contra tabla User
+- ✅ Sistema completamente dinámico
+
+**Mejoras adicionales**:
+- ✅ EPG sin warnings innecesarios
+- ✅ Detección inteligente de compresión
+- ✅ Logs más limpios y profesionales
+
+**Seguridad**:
+- Passwords hasheados con bcrypt
+- Validación de unicidad de username
+- Actualización de last_login automática
+- Control de usuarios activos/inactivos
+
+**Commits**:
+- `53d10a5` - "FASE 9 COMPLETADA: Control total sobre credenciales admin + Corrección EPG gzip detection"
 
 ---
 
