@@ -11,12 +11,14 @@
 1. [API Principal (Root)](#api-principal-root)
 2. [API de Dashboard](#api-de-dashboard)
 3. [API de Gestión de Canales](#api-de-gestión-de-canales)
-4. [API Xtream Codes](#api-xtream-codes)
-5. [API de EPG](#api-de-epg)
-6. [API de AceProxy](#api-de-aceproxy)
-7. [API de Scraper](#api-de-scraper)
-8. [API de Logs](#api-de-logs)
-9. [API de Búsqueda AceStream](#api-de-búsqueda-acestream)
+4. [API de Gestión de Usuarios](#api-de-gestión-de-usuarios)
+5. [API de Configuración (Settings)](#api-de-configuración-settings)
+6. [API Xtream Codes](#api-xtream-codes)
+7. [API de EPG](#api-de-epg)
+8. [API de AceProxy](#api-de-aceproxy)
+9. [API de Scraper](#api-de-scraper)
+10. [API de Logs](#api-de-logs)
+11. [API de Búsqueda AceStream](#api-de-búsqueda-acestream)
 
 ---
 
@@ -739,6 +741,255 @@ http://localhost:6880/live/admin/pass/1.ts
 
 ---
 
+## API de Gestión de Usuarios
+
+### GET /api/users
+
+**Descripción**: Lista de todos los usuarios
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Respuesta**:
+```json
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "email": "admin@example.com",
+    "is_active": true,
+    "is_admin": true,
+    "is_trial": false,
+    "max_connections": 1,
+    "expiry_date": null,
+    "created_at": "2026-01-24T12:00:00",
+    "last_login": "2026-01-24T13:00:00",
+    "notes": null
+  }
+]
+```
+
+### POST /api/users
+
+**Descripción**: Crear un nuevo usuario
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Body**:
+```json
+{
+  "username": "nuevo_usuario",
+  "password": "Password123!",
+  "email": "usuario@example.com",
+  "is_active": true,
+  "is_admin": false,
+  "is_trial": false,
+  "max_connections": 2,
+  "expiry_date": "2026-12-31T23:59:59",
+  "notes": "Usuario de prueba"
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 5,
+  "username": "nuevo_usuario",
+  "message": "User created successfully"
+}
+```
+
+### PUT /api/users/{user_id}
+
+**Descripción**: Actualizar un usuario existente
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Parámetros**:
+- `user_id` (int, requerido): ID del usuario
+
+**Body**:
+```json
+{
+  "email": "nuevo_email@example.com",
+  "is_active": true,
+  "max_connections": 3,
+  "expiry_date": "2027-01-01T00:00:00",
+  "notes": "Usuario actualizado"
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 5,
+  "username": "nuevo_usuario",
+  "message": "User updated successfully"
+}
+```
+
+### DELETE /api/users/{user_id}
+
+**Descripción**: Eliminar un usuario
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Parámetros**:
+- `user_id` (int, requerido): ID del usuario
+
+**Respuesta**:
+```json
+{
+  "message": "User deleted successfully"
+}
+```
+
+### POST /api/users/{user_id}/reset-password
+
+**Descripción**: Restablecer contraseña de un usuario
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Parámetros**:
+- `user_id` (int, requerido): ID del usuario
+
+**Body**:
+```json
+{
+  "new_password": "NewPassword123!"
+}
+```
+
+**Respuesta**:
+```json
+{
+  "message": "Password reset successfully"
+}
+```
+
+---
+
+## API de Configuración (Settings)
+
+### GET /api/settings
+
+**Descripción**: Lista de todas las configuraciones
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Respuesta**:
+```json
+[
+  {
+    "id": 1,
+    "key": "server_name",
+    "value": "Unified IPTV Platform",
+    "description": "Nombre del servidor",
+    "category": "general",
+    "created_at": "2026-01-24T12:00:00",
+    "updated_at": "2026-01-24T12:00:00"
+  }
+]
+```
+
+### POST /api/settings
+
+**Descripción**: Crear una nueva configuración
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Body**:
+```json
+{
+  "key": "nueva_config",
+  "value": "valor",
+  "description": "Descripción de la configuración",
+  "category": "general"
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 10,
+  "key": "nueva_config",
+  "message": "Setting created successfully"
+}
+```
+
+### PUT /api/settings/{setting_id}
+
+**Descripción**: Actualizar una configuración existente
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Parámetros**:
+- `setting_id` (int, requerido): ID de la configuración
+
+**Body**:
+```json
+{
+  "value": "nuevo_valor",
+  "description": "Nueva descripción"
+}
+```
+
+**Respuesta**:
+```json
+{
+  "id": 10,
+  "key": "nueva_config",
+  "message": "Setting updated successfully"
+}
+```
+
+### DELETE /api/settings/{setting_id}
+
+**Descripción**: Eliminar una configuración
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Parámetros**:
+- `setting_id` (int, requerido): ID de la configuración
+
+**Respuesta**:
+```json
+{
+  "message": "Setting deleted successfully"
+}
+```
+
+### POST /api/settings/bulk-update
+
+**Descripción**: Actualizar múltiples configuraciones a la vez
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Body**:
+```json
+{
+  "settings": [
+    {
+      "key": "server_name",
+      "value": "Nuevo Nombre"
+    },
+    {
+      "key": "max_streams",
+      "value": "100"
+    }
+  ]
+}
+```
+
+**Respuesta**:
+```json
+{
+  "message": "2 settings updated successfully",
+  "updated_count": 2
+}
+```
+
+---
+
 ## API de Logs
 
 ### GET /api/logs/tail
@@ -908,11 +1159,10 @@ http://localhost:6880/live/admin/Admin2024!Secure/1.ts
 - `GET /player_api.php?action=get_series`
 - `GET /series/{username}/{password}/{episode_id}.{ext}`
 
-### Gestión de Usuarios
-- `GET /api/users` - Lista de usuarios
-- `POST /api/users` - Crear usuario
-- `PUT /api/users/{id}` - Actualizar usuario
-- `DELETE /api/users/{id}` - Eliminar usuario
+### Gestión Avanzada
+- Estadísticas detalladas por usuario
+- Límites de ancho de banda
+- Geolocalización de conexiones
 
 ---
 
