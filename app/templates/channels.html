@@ -63,7 +63,7 @@
 <script>
 async function loadChannels() {
     try {
-        const response = await fetch('/api/channels?limit=100');
+        const response = await fetch('/api/channels?limit=200');
         const channels = await response.json();
         
         const tbody = document.querySelector('#channelsTable tbody');
