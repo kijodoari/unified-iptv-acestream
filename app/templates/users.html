@@ -260,8 +260,17 @@ async function editUser(id) {
                                     <input type="email" class="form-control" id="editEmail" value="${user.email || ''}">
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-label">Password (leave empty to keep current)</label>
+                                    <input type="password" class="form-control" id="editPassword" placeholder="Enter new password to change">
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">Max Connections</label>
                                     <input type="number" class="form-control" id="editMaxConnections" value="${user.max_connections}" min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Expiry (days from now)</label>
+                                    <input type="number" class="form-control" id="editExpiryDays" placeholder="Leave empty to keep current expiry">
+                                    <small class="text-muted">Current expiry: ${user.expiry_date ? new Date(user.expiry_date).toLocaleDateString() : 'Never'}</small>
                                 </div>
                                 <div class="mb-3">
                                     <div class="form-check">
@@ -319,6 +328,18 @@ async function saveUser(id) {
             is_trial: document.getElementById('editIsTrial').checked,
             notes: document.getElementById('editNotes').value || null
         };
+        
+        // Add password if provided
+        const password = document.getElementById('editPassword').value;
+        if (password) {
+            data.password = password;
+        }
+        
+        // Add expiry_days if provided
+        const expiryDays = document.getElementById('editExpiryDays').value;
+        if (expiryDays) {
+            data.expiry_days = parseInt(expiryDays);
+        }
         
         const response = await fetch(`/api/users/${id}`, {
             method: 'PUT',

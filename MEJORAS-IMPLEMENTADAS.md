@@ -20,6 +20,55 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ---
 
+## 📅 24 de enero de 2026 - Corrección: Campos Faltantes en Modal de Edición de Usuario
+
+### 🎯 Problema/Necesidad
+El modal "Edit User" no tenía los mismos campos que el modal "Add New User":
+- Faltaba campo "Password" para cambiar contraseña desde el modal
+- Faltaba campo "Expiry (days)" para extender/modificar fecha de expiración
+
+Esto hacía que la edición fuera incompleta comparada con la creación.
+
+### ✅ Solución Implementada
+Agregados los campos faltantes al modal de edición para tener paridad completa con el modal de creación.
+
+### 📝 Archivos Modificados
+- `app/templates/users.html` - Agregados campos Password y Expiry al modal de edición
+
+### 🔧 Cambios Técnicos
+
+**Campos agregados al modal "Edit User"**:
+1. **Password**: Campo opcional para cambiar contraseña
+   - Placeholder: "Enter new password to change"
+   - Si se deja vacío, mantiene la contraseña actual
+   
+2. **Expiry (days)**: Campo opcional para extender expiración
+   - Placeholder: "Leave empty to keep current expiry"
+   - Muestra fecha de expiración actual
+   - Calcula nueva fecha desde el momento actual
+
+**Función `saveUser()` actualizada**:
+- Incluye `password` solo si se proporciona
+- Incluye `expiry_days` solo si se proporciona
+- Mantiene compatibilidad con API existente
+
+### 🧪 Pruebas Pendientes
+- ⏳ Probar cambio de contraseña desde modal de edición
+- ⏳ Probar extensión de fecha de expiración
+- ⏳ Verificar que campos opcionales funcionan correctamente
+
+### 📦 Despliegue
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
+
+### 🔮 Notas Adicionales
+Ahora el modal de edición tiene paridad completa con el modal de creación, permitiendo modificar todos los campos del usuario desde la interfaz.
+
+---
+
 ## 📅 24 de enero de 2026 - Pruebas Exhaustivas de API User Management
 
 ### 🎯 Objetivo
