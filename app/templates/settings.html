@@ -2,14 +2,446 @@
 {% block title %}Settings - Unified AceStream Platform{% endblock %}
 {% block settings_active %}active{% endblock %}
 {% block page_title %}Settings{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" onclick="showAddSettingModal()">
+    <i class="bi bi-plus-circle"></i> Add Setting
+</button>
+<button class="btn btn-success" onclick="saveAllSettings()">
+    <i class="bi bi-save"></i> Save All
+</button>
+{% endblock %}
+
 {% block content %}
-<div class="card">
-    <div class="card-body">
-        <div class="empty-state">
-            <i class="bi bi-gear"></i>
-            <h4>Settings</h4>
-            <p>Settings interface coming soon...</p>
+<div class="row">
+    <!-- General Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">General Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Server Name</label>
+                    <input type="text" class="form-control setting-input" data-key="server_name" placeholder="My AceStream Server">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Server Description</label>
+                    <textarea class="form-control setting-input" data-key="server_description" rows="2" placeholder="Server description"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Admin Email</label>
+                    <input type="email" class="form-control setting-input" data-key="admin_email" placeholder="admin@example.com">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AceStream Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">AceStream Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">AceStream Engine Host</label>
+                    <input type="text" class="form-control setting-input" data-key="acestream_host" placeholder="acestream">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">AceStream Engine Port</label>
+                    <input type="number" class="form-control setting-input" data-key="acestream_port" placeholder="6878">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Stream Timeout (seconds)</label>
+                    <input type="number" class="form-control setting-input" data-key="stream_timeout" placeholder="30">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scraper Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Scraper Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Auto-Scrape Interval (hours)</label>
+                    <input type="number" class="form-control setting-input" data-key="scraper_interval" placeholder="24">
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input setting-checkbox" data-key="scraper_enabled" id="scraperEnabled">
+                        <label class="form-check-label" for="scraperEnabled">Enable Auto-Scraping</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input setting-checkbox" data-key="scraper_remove_duplicates" id="scraperRemoveDuplicates">
+                        <label class="form-check-label" for="scraperRemoveDuplicates">Remove Duplicate Channels</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EPG Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">EPG Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">EPG Update Interval (hours)</label>
+                    <input type="number" class="form-control setting-input" data-key="epg_interval" placeholder="12">
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input setting-checkbox" data-key="epg_enabled" id="epgEnabled">
+                        <label class="form-check-label" for="epgEnabled">Enable Auto-Update EPG</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">EPG Days to Keep</label>
+                    <input type="number" class="form-control setting-input" data-key="epg_days_keep" placeholder="7">
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- All Settings Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0">All Settings</h5>
+            </div>
+            <div class="col-auto">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" class="form-control" id="searchInput" 
+                           placeholder="Search settings..." onkeyup="filterSettings()">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="settingsTable">
+                <thead>
+                    <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="4" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allSettings = [];
+
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        allSettings = await response.json();
+        
+        // Populate form inputs
+        allSettings.forEach(setting => {
+            const input = document.querySelector(`[data-key="${setting.key}"]`);
+            if (input) {
+                if (input.type === 'checkbox') {
+                    input.checked = setting.value === 'true' || setting.value === '1';
+                } else {
+                    input.value = setting.value;
+                }
+            }
+        });
+        
+        // Populate table
+        const tbody = document.querySelector('#settingsTable tbody');
+        tbody.innerHTML = '';
+        
+        if (allSettings.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center">
+                        <div class="empty-state">
+                            <i class="bi bi-gear"></i>
+                            <p>No settings found. Add your first setting.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            allSettings.forEach(setting => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><code>${setting.key}</code></td>
+                    <td>${setting.value}</td>
+                    <td>${setting.description || '<span class="text-muted">N/A</span>'}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-info" onclick="editSetting('${setting.key}')" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="deleteSetting('${setting.key}')" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showAlert('Error loading settings', 'danger');
+    }
+}
+
+function filterSettings() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const rows = document.querySelectorAll('#settingsTable tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+}
+
+async function saveAllSettings() {
+    try {
+        const settingsToUpdate = [];
+        
+        // Collect all inputs
+        document.querySelectorAll('.setting-input, .setting-checkbox').forEach(input => {
+            const key = input.dataset.key;
+            let value;
+            
+            if (input.type === 'checkbox') {
+                value = input.checked ? 'true' : 'false';
+            } else {
+                value = input.value;
+            }
+            
+            if (key && value !== '') {
+                settingsToUpdate.push({ key, value });
+            }
+        });
+        
+        const response = await fetch('/api/settings/bulk-update', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(settingsToUpdate)
+        });
+        
+        if (!response.ok) throw new Error('Failed to save settings');
+        
+        const result = await response.json();
+        showAlert(result.message, 'success');
+        loadSettings();
+        
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showAlert('Error saving settings: ' + error.message, 'danger');
+    }
+}
+
+function showAddSettingModal() {
+    const modalHtml = `
+        <div class="modal fade" id="addSettingModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add New Setting</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addSettingForm">
+                            <div class="mb-3">
+                                <label class="form-label">Key *</label>
+                                <input type="text" class="form-control" id="addKey" required>
+                                <small class="text-muted">Use lowercase with underscores (e.g., my_setting_key)</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Value *</label>
+                                <input type="text" class="form-control" id="addValue" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" id="addDescription" rows="2"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="addSetting()">Add Setting</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('addSettingModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('addSettingModal'));
+    modal.show();
+}
+
+async function addSetting() {
+    try {
+        const data = {
+            key: document.getElementById('addKey').value,
+            value: document.getElementById('addValue').value,
+            description: document.getElementById('addDescription').value || null
+        };
+        
+        if (!data.key || !data.value) {
+            showAlert('Key and value are required', 'warning');
+            return;
+        }
+        
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to add setting');
+        }
+        
+        showAlert('Setting added successfully', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('addSettingModal')).hide();
+        loadSettings();
+        
+    } catch (error) {
+        console.error('Error adding setting:', error);
+        showAlert('Error adding setting: ' + error.message, 'danger');
+    }
+}
+
+async function editSetting(key) {
+    try {
+        const response = await fetch(`/api/settings/${key}`);
+        if (!response.ok) throw new Error('Setting not found');
+        
+        const setting = await response.json();
+        
+        const modalHtml = `
+            <div class="modal fade" id="editSettingModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Setting: ${setting.key}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editSettingForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Key</label>
+                                    <input type="text" class="form-control" value="${setting.key}" disabled>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Value *</label>
+                                    <input type="text" class="form-control" id="editValue" value="${setting.value}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <textarea class="form-control" id="editDescription" rows="2">${setting.description || ''}</textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="saveSetting('${setting.key}')">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const existingModal = document.getElementById('editSettingModal');
+        if (existingModal) existingModal.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('editSettingModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error loading setting:', error);
+        showAlert('Error loading setting: ' + error.message, 'danger');
+    }
+}
+
+async function saveSetting(key) {
+    try {
+        const data = {
+            value: document.getElementById('editValue').value,
+            description: document.getElementById('editDescription').value || null
+        };
+        
+        const response = await fetch(`/api/settings/${key}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to update setting');
+        }
+        
+        showAlert('Setting updated successfully', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('editSettingModal')).hide();
+        loadSettings();
+        
+    } catch (error) {
+        console.error('Error updating setting:', error);
+        showAlert('Error updating setting: ' + error.message, 'danger');
+    }
+}
+
+async function deleteSetting(key) {
+    if (!confirm(`Are you sure you want to delete setting "${key}"?`)) return;
+    
+    try {
+        const response = await fetch(`/api/settings/${key}`, {method: 'DELETE'});
+        if (!response.ok) throw new Error('Failed to delete setting');
+        
+        showAlert('Setting deleted successfully', 'success');
+        loadSettings();
+    } catch (error) {
+        console.error('Error deleting setting:', error);
+        showAlert('Error deleting setting: ' + error.message, 'danger');
+    }
+}
+
+// Load settings on page load
+loadSettings();
+</script>
 {% endblock %}

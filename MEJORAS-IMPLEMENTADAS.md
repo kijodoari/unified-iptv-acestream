@@ -8,15 +8,85 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - Pruebas Exhaustivas de API User Management](#-24-de-enero-de-2026---pruebas-exhaustivas-de-api-user-management)
-2. [24 de enero de 2026 - FASE 1: Implementación de User Management](#-24-de-enero-de-2026---fase-1-implementación-de-user-management)
-3. [24 de enero de 2026 - Implementación de Reproductor HLS en el Navegador](#-24-de-enero-de-2026---implementación-de-reproductor-hls-en-el-navegador)
-4. [24 de enero de 2026 - Creación de Guía de Ejemplos Prácticos de Uso](#-24-de-enero-de-2026---creación-de-guía-de-ejemplos-prácticos-de-uso)
-5. [24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso](#-24-de-enero-de-2026---corrección-de-interfaz-de-reproducción-y-documentación-de-acceso)
-6. [24 de enero de 2026 - Corrección de Configuración de Streaming en Docker](#-24-de-enero-de-2026---corrección-de-configuración-de-streaming-en-docker)
-7. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
-8. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
-9. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+1. [24 de enero de 2026 - FASE 2: Implementación de Settings Management](#-24-de-enero-de-2026---fase-2-implementación-de-settings-management)
+2. [24 de enero de 2026 - Corrección: Campos Faltantes en Modal de Edición de Usuario](#-24-de-enero-de-2026---corrección-campos-faltantes-en-modal-de-edición-de-usuario)
+3. [24 de enero de 2026 - Pruebas Exhaustivas de API User Management](#-24-de-enero-de-2026---pruebas-exhaustivas-de-api-user-management)
+4. [24 de enero de 2026 - FASE 1: Implementación de User Management](#-24-de-enero-de-2026---fase-1-implementación-de-user-management)
+5. [24 de enero de 2026 - Implementación de Reproductor HLS en el Navegador](#-24-de-enero-de-2026---implementación-de-reproductor-hls-en-el-navegador)
+6. [24 de enero de 2026 - Creación de Guía de Ejemplos Prácticos de Uso](#-24-de-enero-de-2026---creación-de-guía-de-ejemplos-prácticos-de-uso)
+7. [24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso](#-24-de-enero-de-2026---corrección-de-interfaz-de-reproducción-y-documentación-de-acceso)
+8. [24 de enero de 2026 - Corrección de Configuración de Streaming en Docker](#-24-de-enero-de-2026---corrección-de-configuración-de-streaming-en-docker)
+9. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
+10. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
+11. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+
+---
+
+## 📅 24 de enero de 2026 - FASE 2: Implementación de Settings Management
+
+### 🎯 Problema/Necesidad
+La interfaz de configuración del sistema estaba vacía, mostrando solo "coming soon". Se necesitaba una interfaz completa para gestionar todas las configuraciones de la plataforma (servidor, AceStream, scraper, EPG).
+
+### ✅ Solución Implementada
+Implementación completa de Settings Management con backend y frontend funcional.
+
+### 📝 Archivos Modificados
+- `app/api/settings.py` - NUEVO: API completa de gestión de configuraciones (180 líneas)
+- `app/templates/settings.html` - REEMPLAZADO: Interfaz completa de configuración (450 líneas)
+- `main.py` - Agregado router de settings
+
+### 🔧 Cambios Técnicos
+
+**Backend - Nuevos Endpoints**:
+- `GET /api/settings` - Listar todas las configuraciones
+- `GET /api/settings/{key}` - Obtener configuración por clave
+- `POST /api/settings` - Crear nueva configuración
+- `PUT /api/settings/{key}` - Actualizar configuración
+- `DELETE /api/settings/{key}` - Eliminar configuración
+- `POST /api/settings/bulk-update` - Actualización masiva de configuraciones
+
+**Frontend - Funcionalidades**:
+- 4 paneles de configuración organizados:
+  - General Settings (nombre servidor, descripción, email admin)
+  - AceStream Settings (host, puerto, timeout)
+  - Scraper Settings (intervalo, auto-scrape, duplicados)
+  - EPG Settings (intervalo, auto-update, días a mantener)
+- Tabla con todas las configuraciones
+- Búsqueda en tiempo real
+- Modal para agregar configuración personalizada
+- Modal para editar configuración
+- Botón "Save All" para guardar todos los cambios
+- Eliminación con confirmación
+
+**Modelos Pydantic**:
+- `SettingCreate` - Validación para crear configuración
+- `SettingUpdate` - Validación para actualizar configuración
+- `SettingResponse` - Respuesta estructurada
+
+**Características Especiales**:
+- Bulk update: actualiza múltiples configuraciones en una sola petición
+- Soporte para checkboxes (valores true/false)
+- Validación de claves únicas
+- Interfaz organizada por categorías
+
+### 🧪 Pruebas Pendientes
+- ⏳ Probar carga de configuraciones existentes
+- ⏳ Probar creación de nueva configuración
+- ⏳ Probar edición de configuración
+- ⏳ Probar eliminación de configuración
+- ⏳ Probar bulk update (Save All)
+- ⏳ Verificar que checkboxes funcionan correctamente
+
+### 📦 Despliegue
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
+
+### 🔮 Próximos Pasos
+- FASE 3: Scraper Management (gestión de fuentes de scraping)
+- FASE 4: EPG Management (gestión de guía electrónica)
 
 ---
 
