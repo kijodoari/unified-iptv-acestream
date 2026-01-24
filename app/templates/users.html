@@ -256,6 +256,10 @@ async function editUser(id) {
                         <div class="modal-body">
                             <form id="editUserForm">
                                 <div class="mb-3">
+                                    <label class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="editUsername" value="${user.username}">
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">Email</label>
                                     <input type="email" class="form-control" id="editEmail" value="${user.email || ''}">
                                 </div>
@@ -321,6 +325,7 @@ async function editUser(id) {
 async function saveUser(id) {
     try {
         const data = {
+            username: document.getElementById('editUsername').value,
             email: document.getElementById('editEmail').value || null,
             max_connections: parseInt(document.getElementById('editMaxConnections').value),
             is_active: document.getElementById('editIsActive').checked,

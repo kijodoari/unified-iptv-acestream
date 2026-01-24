@@ -179,12 +179,18 @@ class EPGService:
                 
                 content = await response.read()
                 
-                # Decompress if needed
-                if is_gzipped:
+                # Auto-detect if content is gzipped by checking magic bytes
+                if len(content) >= 2 and content[:2] == b'\x1f\x8b':
+                    # File is gzipped (magic bytes 1f 8b)
                     try:
                         content = gzip.decompress(content)
+                        logger.debug(f"Decompressed gzipped EPG from {url}")
                     except Exception as e:
-                        logger.warning(f"Failed to decompress, trying as plain text: {e}")
+                        logger.error(f"Failed to decompress gzipped file: {e}")
+                        return None
+                elif is_gzipped:
+                    # User expected gzipped but it's not, just use as-is
+                    logger.debug(f"EPG from {url} is not gzipped, using as plain text")
                 
                 return content.decode('utf-8', errors='ignore')
                 
