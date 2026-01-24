@@ -8,10 +8,144 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - FASE 9 COMPLETADA: Control Total sobre Credenciales Admin + Corrección EPG](#-24-de-enero-de-2026---fase-9-completada-control-total-sobre-credenciales-admin--corrección-epg)
-2. [24 de enero de 2026 - FASE 8: Auditoría y Corrección Completa de Implementación de Settings](#-24-de-enero-de-2026---fase-8-auditoría-y-corrección-completa-de-implementación-de-settings)
-3. [24 de enero de 2026 - Sistema de Colores para Settings: Dinámicos, Restart y ReadOnly](#-24-de-enero-de-2026---sistema-de-colores-para-settings-dinámicos-restart-y-readonly)
-4. [24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs](#-24-de-enero-de-2026---settings-dinámicos-completos-y-gestión-profesional-de-urls)
+1. [24 de enero de 2026 - Sistema de Verificación de Estado de Canales en Tiempo Real](#-24-de-enero-de-2026---sistema-de-verificación-de-estado-de-canales-en-tiempo-real)
+2. [24 de enero de 2026 - FASE 9 COMPLETADA: Control Total sobre Credenciales Admin + Corrección EPG](#-24-de-enero-de-2026---fase-9-completada-control-total-sobre-credenciales-admin--corrección-epg)
+3. [24 de enero de 2026 - FASE 8: Auditoría y Corrección Completa de Implementación de Settings](#-24-de-enero-de-2026---fase-8-auditoría-y-corrección-completa-de-implementación-de-settings)
+4. [24 de enero de 2026 - Sistema de Colores para Settings: Dinámicos, Restart y ReadOnly](#-24-de-enero-de-2026---sistema-de-colores-para-settings-dinámicos-restart-y-readonly)
+5. [24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs](#-24-de-enero-de-2026---settings-dinámicos-completos-y-gestión-profesional-de-urls)
+
+---
+
+## 📅 24 de enero de 2026 - Sistema de Verificación de Estado de Canales en Tiempo Real
+
+### 🎯 Problema/Necesidad
+
+**Problema identificado**: En la página de Channels, la columna "Status" mostraba todos los canales como "Unknown" (gris), sin forma de saber qué canales están realmente disponibles.
+
+**Causa raíz**:
+1. El campo `is_online` del modelo `Channel` se inicializa en `None` al crear canales
+2. No había forma visual de verificar el estado de los canales desde la interfaz
+3. El endpoint `/api/channels/check/stream` existía pero no se usaba desde el frontend
+4. La lógica de colores solo distinguía entre `True` (Online) y todo lo demás (Unknown)
+
+### ✅ Solución Implementada
+
+Sistema completo de verificación de estado de canales con feedback en tiempo real usando Server-Sent Events (SSE).
+
+#### Frontend - Channels Template
+
+**Archivo**: `app/templates/channels.html`
+
+**Cambios implementados**:
+
+1. **Botón de verificación** en la barra de acciones:
+```html
+<button class="btn btn-success me-2" id="checkChannelsBtn" onclick="checkAllChannels()">
+    <i class="bi bi-check-circle"></i> Check Status
+</button>
+```
+
+2. **Lógica de colores mejorada** para distinguir 3 estados:
+```javascript
+// Antes: Solo Online (verde) o Unknown (gris)
+${channel.is_online ? 'bg-success' : 'bg-secondary'}
+
+// Después: Online (verde), Offline (rojo), Unknown (gris)
+${channel.is_online === true ? 'bg-success' : (channel.is_online === false ? 'bg-danger' : 'bg-secondary')}
+```
+
+3. **Función `checkAllChannels()`** con SSE para progreso en tiempo real:
+   - Conecta a `/api/channels/check/stream` usando EventSource
+   - Actualiza el botón con progreso: "Checking 5/50: Canal Deportes"
+   - Actualiza badges de estado en tiempo real mientras verifica
+   - Muestra estadísticas: "Checking... (12 online, 3 offline)"
+   - Maneja errores y cierra conexión correctamente
+   - Restaura botón al finalizar
+
+4. **Actualización en tiempo real de badges**:
+```javascript
+const statusBadge = document.getElementById(`status-${data.channel.id}`);
+if (data.channel.status === 'online') {
+    statusBadge.className = 'badge bg-success';
+    statusBadge.textContent = 'Online';
+} else if (data.channel.status === 'offline') {
+    statusBadge.className = 'badge bg-danger';
+    statusBadge.textContent = 'Offline';
+}
+```
+
+5. **ID único para cada badge** de estado:
+```javascript
+<span class="badge ..." id="status-${channel.id}">
+```
+
+### 🔧 Características Técnicas
+
+**Server-Sent Events (SSE)**:
+- Conexión unidireccional del servidor al cliente
+- Actualizaciones en tiempo real sin polling
+- Eventos: `start`, `info`, `checking`, `progress`, `complete`, `error`
+- Cierre automático de conexión al finalizar
+
+**Estados de Canal**:
+- **Online** (verde): `is_online === true` - Canal verificado y disponible
+- **Offline** (rojo): `is_online === false` - Canal verificado pero no disponible
+- **Unknown** (gris): `is_online === null` - Canal no verificado aún
+
+**Feedback Visual**:
+- Botón deshabilitado durante verificación
+- Spinner animado en el botón
+- Texto dinámico con canal actual y progreso
+- Estadísticas en tiempo real (online/offline)
+- Actualización instantánea de badges en la tabla
+
+### 📝 Archivos Modificados
+
+- `app/templates/channels.html` - Agregado botón, función checkAllChannels() y lógica de colores mejorada
+
+### 🧪 Pruebas Realizadas
+
+✅ **Verificación de interfaz**:
+- Botón "Check Status" visible en la página de Channels
+- Colores correctos: Verde (Online), Rojo (Offline), Gris (Unknown)
+
+✅ **Funcionalidad SSE**:
+- Conexión a `/api/channels/check/stream` exitosa
+- Eventos recibidos correctamente
+- Actualización en tiempo real de badges
+- Progreso visible en el botón
+
+✅ **Manejo de errores**:
+- Cierre correcto de conexión SSE
+- Restauración del botón en caso de error
+- Mensajes de error claros al usuario
+
+### 📦 Despliegue
+
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+
+# Verificación
+curl http://localhost:6880/health
+# {"status":"healthy","services":{"aceproxy":true,"scraper":true,"epg":true},"aceproxy_streams":0}
+```
+
+### 🔮 Beneficios
+
+1. **Visibilidad**: Los usuarios pueden ver qué canales están disponibles
+2. **Tiempo real**: Feedback instantáneo durante la verificación
+3. **Experiencia mejorada**: No hay que esperar sin saber qué pasa
+4. **Colores intuitivos**: Verde = funciona, Rojo = no funciona, Gris = no verificado
+5. **No bloquea**: La verificación corre en background, el servidor sigue respondiendo
+
+### 🔮 Notas Adicionales
+
+- El endpoint `/api/channels/check/stream` ya existía en el backend, solo faltaba conectarlo al frontend
+- La verificación puede tardar varios minutos si hay muchos canales
+- El sistema usa el servicio AceProxy para verificar disponibilidad de streams
+- Los canales sin AceStream ID se marcan como "skipped" automáticamente
 
 ---
 

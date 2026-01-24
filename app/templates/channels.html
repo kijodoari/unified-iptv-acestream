@@ -5,6 +5,9 @@
 {% block page_title %}Channels Management{% endblock %}
 
 {% block page_actions %}
+<button class="btn btn-success me-2" id="checkChannelsBtn" onclick="checkAllChannels()">
+    <i class="bi bi-check-circle"></i> Check Status
+</button>
 <button class="btn btn-primary" onclick="showAddChannelModal()">
     <i class="bi bi-plus-circle"></i> Add Channel
 </button>
@@ -88,8 +91,8 @@ async function loadChannels() {
                     <td>${channel.category || '<span class="text-muted">N/A</span>'}</td>
                     <td><code class="small">${channel.acestream_id ? channel.acestream_id.substring(0, 20) + '...' : 'N/A'}</code></td>
                     <td>
-                        <span class="badge ${channel.is_online ? 'bg-success' : 'bg-secondary'}">
-                            ${channel.is_online ? 'Online' : 'Unknown'}
+                        <span class="badge ${channel.is_online === true ? 'bg-success' : (channel.is_online === false ? 'bg-danger' : 'bg-secondary')}" id="status-${channel.id}">
+                            ${channel.is_online === true ? 'Online' : (channel.is_online === false ? 'Offline' : 'Unknown')}
                         </span>
                     </td>
                     <td>${new Date(channel.created_at).toLocaleDateString()}</td>
@@ -473,6 +476,99 @@ async function addChannel() {
     } catch (error) {
         console.error('Error adding channel:', error);
         showAlert('Error adding channel: ' + error.message, 'danger');
+    }
+}
+
+// Check all channels status with real-time progress
+async function checkAllChannels() {
+    const btn = document.getElementById('checkChannelsBtn');
+    const originalHtml = btn.innerHTML;
+    
+    try {
+        // Disable button and show spinner
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Checking...';
+        
+        // Create EventSource for SSE
+        const eventSource = new EventSource('/api/channels/check/stream');
+        
+        eventSource.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                
+                switch(data.type) {
+                    case 'start':
+                        console.log('Check started:', data.message);
+                        break;
+                    
+                    case 'info':
+                        console.log('Info:', data.message);
+                        break;
+                    
+                    case 'checking':
+                        // Update button text with current channel
+                        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Checking ${data.index}/${data.total}: ${data.channel.name}`;
+                        break;
+                    
+                    case 'progress':
+                        // Update status badge in real-time
+                        const statusBadge = document.getElementById(`status-${data.channel.id}`);
+                        if (statusBadge) {
+                            if (data.channel.status === 'online') {
+                                statusBadge.className = 'badge bg-success';
+                                statusBadge.textContent = 'Online';
+                            } else if (data.channel.status === 'offline') {
+                                statusBadge.className = 'badge bg-danger';
+                                statusBadge.textContent = 'Offline';
+                            } else if (data.channel.status === 'skipped') {
+                                statusBadge.className = 'badge bg-secondary';
+                                statusBadge.textContent = 'Unknown';
+                            } else if (data.channel.status === 'error') {
+                                statusBadge.className = 'badge bg-danger';
+                                statusBadge.textContent = 'Error';
+                            }
+                        }
+                        
+                        // Update button with stats
+                        if (data.stats) {
+                            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>Checking... (${data.stats.online} online, ${data.stats.offline} offline)`;
+                        }
+                        break;
+                    
+                    case 'complete':
+                        console.log('Check completed:', data.message);
+                        showAlert(`Check completed: ${data.details.online} online, ${data.details.offline} offline, ${data.details.skipped} skipped in ${data.details.elapsed_seconds}s`, 'success');
+                        eventSource.close();
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                        break;
+                    
+                    case 'error':
+                        console.error('Check error:', data.message);
+                        showAlert('Error checking channels: ' + data.message, 'danger');
+                        eventSource.close();
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                        break;
+                }
+            } catch (e) {
+                console.error('Error parsing SSE data:', e);
+            }
+        };
+        
+        eventSource.onerror = function(error) {
+            console.error('SSE error:', error);
+            showAlert('Connection error during channel check', 'danger');
+            eventSource.close();
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        };
+        
+    } catch (error) {
+        console.error('Error checking channels:', error);
+        showAlert('Error checking channels: ' + error.message, 'danger');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
     }
 }
 
