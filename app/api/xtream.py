@@ -668,21 +668,20 @@ async def trigger_epg_update(
 @router.get("/epg/status")
 async def get_epg_status(
     request: Request,
-    username: Optional[str] = None,
-    password: Optional[str] = None,
+    username: Optional[str] = Query(None),
+    password: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """
     Get EPG status and statistics
-    Requires authentication
+    Authentication optional - returns public stats if not authenticated
     """
     
-    if not username or not password:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
-    user = verify_user(db, username, password)
-    if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    # Authentication is optional for status endpoint
+    if username and password:
+        user = verify_user(db, username, password)
+        if not user or not user.is_active:
+            raise HTTPException(status_code=401, detail="Unauthorized")
     
     config = get_config()
     
@@ -737,16 +736,18 @@ async def get_epg_status(
 async def get_channel_epg(
     channel_id: int,
     request: Request,
-    username: Optional[str] = None,
-    password: Optional[str] = None,
+    username: Optional[str] = Query(None),
+    password: Optional[str] = Query(None),
     hours: int = Query(24, description="Hours of EPG to return"),
     db: Session = Depends(get_db)
 ):
     """
     Get EPG for a specific channel
     Returns programmes for the next N hours
+    Authentication optional - returns public EPG if not authenticated
     """
     
+    # Authentication is optional for EPG data
     if username and password:
         user = verify_user(db, username, password)
         if not user or not user.is_active:

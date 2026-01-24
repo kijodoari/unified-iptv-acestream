@@ -50,7 +50,7 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
 # Configure logging with force=True to override any existing config
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),

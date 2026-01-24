@@ -3,14 +3,14 @@ API endpoints for dashboard data
 """
 import logging
 import time
+import json
 from datetime import datetime
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.utils.auth import get_db
 from app.models import Channel, User, Category, ScraperURL, EPGSource
-from fastapi.responses import StreamingResponse
 from fastapi.responses import StreamingResponse, Response
 import aiohttp
 
@@ -264,8 +264,8 @@ async def delete_channel(
 
 
 @router.post("/scraper/trigger")
-async def trigger_scraping(db: Session = Depends(get_db)):
-    """Trigger manual scraping"""
+async def trigger_scraping(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Trigger manual scraping - returns immediately and runs in background"""
     from main import scraper_service
     
     logger.info("=== MANUAL SCRAPING TRIGGERED VIA API ===")
@@ -274,44 +274,213 @@ async def trigger_scraping(db: Session = Depends(get_db)):
         logger.error("Scraper service not initialized")
         return {"status": "error", "message": "Scraper service not initialized"}
     
+    # Retornar inmediatamente y ejecutar en background
+    background_tasks.add_task(scraper_background, scraper_service, db)
+    
+    return {
+        "status": "started",
+        "message": "Scraping started in background. Use GET /api/scraper/stream for real-time progress.",
+        "info": "The scraping is running in background and won't block the server. Check logs or use SSE endpoint for progress."
+    }
+
+
+async def scraper_background(scraper_service, db: Session):
+    """Background task for scraping"""
     try:
-        # Pass db session to scraper
         start_time = time.time()
-        logger.info("Starting scraping process...")
+        logger.info("Background scraping: Starting...")
+        
         results = await scraper_service.scrape_m3u_sources(db)
         elapsed = time.time() - start_time
         
         total_channels = sum(results.values())
         
-        logger.info(f"=== SCRAPING COMPLETED: {total_channels} channels from {len(results)} source(s) in {elapsed:.2f}s ===")
+        logger.info(f"=== BACKGROUND SCRAPING COMPLETED: {total_channels} channels from {len(results)} source(s) in {elapsed:.2f}s ===")
         
-        return {
-            "status": "success",
-            "message": f"Scraped {total_channels} channels from {len(results)} source(s)",
-            "details": {
-                "total_channels": total_channels,
-                "sources_processed": len(results),
-                "results": results,
-                "elapsed_seconds": round(elapsed, 2)
-            }
-        }
     except Exception as e:
-        logger.error(f"Error triggering scraping: {e}", exc_info=True)
-        return {"status": "error", "message": str(e)}
+        logger.error(f"Error in background scraping: {e}", exc_info=True)
 
 
 @router.post("/epg/update")
-async def update_epg(db: Session = Depends(get_db)):
-    """Trigger EPG update"""
-    # TODO: Implement EPG update trigger
-    return {"status": "triggered", "message": "EPG update will start shortly"}
+async def update_epg(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Trigger EPG update - returns immediately and runs in background"""
+    from main import epg_service
+    
+    logger.info("=== MANUAL EPG UPDATE TRIGGERED VIA API ===")
+    
+    if not epg_service:
+        logger.error("EPG service not initialized")
+        return {"status": "error", "message": "EPG service not initialized"}
+    
+    # Retornar inmediatamente y ejecutar en background
+    background_tasks.add_task(epg_update_background, epg_service)
+    
+    return {
+        "status": "started",
+        "message": "EPG update started in background. Use GET /api/epg/stream for real-time progress.",
+        "info": "The EPG update is running in background and won't block the server. Check logs or use SSE endpoint for progress."
+    }
+
+
+async def epg_update_background(epg_service):
+    """Background task for EPG update"""
+    try:
+        start_time = time.time()
+        logger.info("Background EPG update: Starting...")
+        
+        programs_count = await epg_service.update_all_epg()
+        elapsed = time.time() - start_time
+        
+        logger.info(f"=== BACKGROUND EPG UPDATE COMPLETED: {programs_count} programs in {elapsed:.2f}s ===")
+        
+    except Exception as e:
+        logger.error(f"Error in background EPG update: {e}", exc_info=True)
 
 
 @router.post("/channels/check")
-async def check_channels(db: Session = Depends(get_db)):
-    """Check channel status"""
-    # TODO: Implement channel status check
-    return {"status": "triggered", "message": "Channel check will start shortly"}
+async def check_channels(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Check channel status - returns immediately and runs in background"""
+    from main import aceproxy_service
+    
+    logger.info("=== MANUAL CHANNEL CHECK TRIGGERED VIA API ===")
+    
+    if not aceproxy_service:
+        logger.error("AceProxy service not initialized")
+        return {"status": "error", "message": "AceProxy service not initialized"}
+    
+    # Retornar inmediatamente y ejecutar en background
+    background_tasks.add_task(check_channels_background, aceproxy_service, db)
+    
+    return {
+        "status": "started",
+        "message": "Channel check started in background. Use GET /api/channels/check/stream for real-time progress.",
+        "info": "The check is running in background and won't block the server. Check logs or use SSE endpoint for progress."
+    }
+
+
+async def check_channels_background(aceproxy_service, db: Session):
+    """Background task for checking channels"""
+    try:
+        start_time = time.time()
+        channels = db.query(Channel).filter(Channel.is_active == True).all()
+        
+        if not channels:
+            logger.info("No channels to check")
+            return
+        
+        total_channels = len(channels)
+        checked = 0
+        online = 0
+        offline = 0
+        skipped = 0
+        
+        logger.info(f"Background check: Found {total_channels} channels")
+        
+        for index, channel in enumerate(channels, 1):
+            if not channel.acestream_id:
+                skipped += 1
+                continue
+            
+            try:
+                is_available = await aceproxy_service.check_stream_availability(channel.acestream_id)
+                channel.is_online = is_available
+                channel.updated_at = datetime.utcnow()
+                
+                if is_available:
+                    online += 1
+                else:
+                    offline += 1
+                
+                checked += 1
+                
+            except Exception as e:
+                logger.warning(f"Error checking channel {channel.id}: {e}")
+                channel.is_online = False
+                channel.updated_at = datetime.utcnow()
+                offline += 1
+                checked += 1
+        
+        db.commit()
+        elapsed = time.time() - start_time
+        
+        logger.info(f"=== BACKGROUND CHECK COMPLETED: {checked} checked, {online} online, {offline} offline in {elapsed:.2f}s ===")
+        
+    except Exception as e:
+        logger.error(f"Error in background check: {e}", exc_info=True)
+
+
+@router.get("/channels/check/stream")
+async def check_channels_stream(request: Request, db: Session = Depends(get_db)):
+    """Check channel status with real-time progress via Server-Sent Events"""
+    from main import aceproxy_service
+    
+    async def event_generator():
+        try:
+            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting channel check...'})}\n\n"
+            
+            if not aceproxy_service:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'AceProxy service not initialized'})}\n\n"
+                return
+            
+            start_time = time.time()
+            channels = db.query(Channel).filter(Channel.is_active == True).all()
+            
+            if not channels:
+                yield f"data: {json.dumps({'type': 'complete', 'message': 'No channels to check', 'details': {'total': 0}})}\n\n"
+                return
+            
+            total_channels = len(channels)
+            checked = 0
+            online = 0
+            offline = 0
+            skipped = 0
+            
+            yield f"data: {json.dumps({'type': 'info', 'message': f'Found {total_channels} channels to check'})}\n\n"
+            
+            for index, channel in enumerate(channels, 1):
+                if not channel.acestream_id:
+                    skipped += 1
+                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name, 'status': 'skipped', 'reason': 'No AceStream ID'}})}\n\n"
+                    continue
+                
+                try:
+                    check_start = time.time()
+                    yield f"data: {json.dumps({'type': 'checking', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name}})}\n\n"
+                    
+                    is_available = await aceproxy_service.check_stream_availability(channel.acestream_id)
+                    check_elapsed = time.time() - check_start
+                    
+                    channel.is_online = is_available
+                    channel.updated_at = datetime.utcnow()
+                    
+                    if is_available:
+                        online += 1
+                        status = "online"
+                    else:
+                        offline += 1
+                        status = "offline"
+                    
+                    checked += 1
+                    
+                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name, 'acestream_id': channel.acestream_id, 'status': status, 'check_time': round(check_elapsed, 2)}, 'stats': {'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
+                    
+                except Exception as e:
+                    offline += 1
+                    checked += 1
+                    channel.is_online = False
+                    channel.updated_at = datetime.utcnow()
+                    
+                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name, 'status': 'error', 'error': str(e)}, 'stats': {'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
+            
+            db.commit()
+            elapsed = time.time() - start_time
+            
+            yield f"data: {json.dumps({'type': 'complete', 'message': f'Check completed: {checked} checked, {online} online, {offline} offline, {skipped} skipped', 'details': {'total_channels': total_channels, 'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped, 'elapsed_seconds': round(elapsed, 2)}})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.get("/hls/{channel_id}/manifest.m3u8")

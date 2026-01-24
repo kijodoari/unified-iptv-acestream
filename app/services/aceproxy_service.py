@@ -508,3 +508,7 @@ class AceProxyService:
                 await self._close_stream(ongoing)
                 del self.streams[stream_id]
                 logger.info(f"Forcibly closed stream {stream_id}")
+
+    async def check_stream_availability(self, stream_id: str) -> bool:
+        """Alias for check_stream_available for API compatibility"""
+        return await self.check_stream_available(stream_id)
