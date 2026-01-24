@@ -113,6 +113,88 @@
     </div>
 </div>
 
+<!-- Content Sources (M3U URLs) -->
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-play"></i> Content Sources (M3U URLs)</h5>
+                <small class="text-muted">Manage your M3U playlist sources - Changes apply dynamically without restart</small>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary" onclick="showAddSourceModal('scraper')">
+                    <i class="bi bi-plus-circle"></i> Add M3U Source
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="scraperSourcesTable">
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>Status</th>
+                        <th>Last Scraped</th>
+                        <th>Channels Found</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- EPG Sources (XMLTV URLs) -->
+<div class="card mb-4">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><i class="bi bi-calendar3"></i> EPG Sources (XMLTV URLs)</h5>
+                <small class="text-muted">Manage your EPG XMLTV sources - Changes apply dynamically without restart</small>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary" onclick="showAddSourceModal('epg')">
+                    <i class="bi bi-plus-circle"></i> Add EPG Source
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="epgSourcesTable">
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>Status</th>
+                        <th>Last Updated</th>
+                        <th>Programs Found</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- All Settings Table -->
 <div class="card">
     <div class="card-header">
@@ -443,5 +525,391 @@ async function deleteSetting(key) {
 
 // Load settings on page load
 loadSettings();
+loadScraperSources();
+loadEPGSources();
+
+// Load scraper sources
+async function loadScraperSources() {
+    try {
+        const response = await fetch('/api/scraper/sources');
+        const sources = await response.json();
+        
+        const tbody = document.querySelector('#scraperSourcesTable tbody');
+        tbody.innerHTML = '';
+        
+        if (sources.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center">
+                        <div class="empty-state">
+                            <i class="bi bi-file-earmark-play"></i>
+                            <p>No M3U sources configured. Add your first source.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            sources.forEach(source => {
+                const row = document.createElement('tr');
+                const statusBadge = source.is_enabled 
+                    ? '<span class="badge bg-success">Enabled</span>' 
+                    : '<span class="badge bg-secondary">Disabled</span>';
+                const lastScraped = source.last_scraped 
+                    ? new Date(source.last_scraped).toLocaleString() 
+                    : '<span class="text-muted">Never</span>';
+                
+                row.innerHTML = `
+                    <td><small>${source.url}</small></td>
+                    <td>${statusBadge}</td>
+                    <td>${lastScraped}</td>
+                    <td><span class="badge bg-info">${source.channels_found}</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-${source.is_enabled ? 'warning' : 'success'}" 
+                                    onclick="toggleSource('scraper', ${source.id}, ${!source.is_enabled})" 
+                                    title="${source.is_enabled ? 'Disable' : 'Enable'}">
+                                <i class="bi bi-${source.is_enabled ? 'pause' : 'play'}-circle"></i>
+                            </button>
+                            <button class="btn btn-outline-info" 
+                                    onclick="editSource('scraper', ${source.id})" 
+                                    title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" 
+                                    onclick="deleteSource('scraper', ${source.id})" 
+                                    title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading scraper sources:', error);
+        showAlert('Error loading M3U sources', 'danger');
+    }
+}
+
+// Load EPG sources
+async function loadEPGSources() {
+    try {
+        const response = await fetch('/api/epg/sources');
+        const sources = await response.json();
+        
+        const tbody = document.querySelector('#epgSourcesTable tbody');
+        tbody.innerHTML = '';
+        
+        if (sources.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center">
+                        <div class="empty-state">
+                            <i class="bi bi-calendar3"></i>
+                            <p>No EPG sources configured. Add your first source.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            sources.forEach(source => {
+                const row = document.createElement('tr');
+                const statusBadge = source.is_enabled 
+                    ? '<span class="badge bg-success">Enabled</span>' 
+                    : '<span class="badge bg-secondary">Disabled</span>';
+                const lastUpdated = source.last_updated 
+                    ? new Date(source.last_updated).toLocaleString() 
+                    : '<span class="text-muted">Never</span>';
+                
+                row.innerHTML = `
+                    <td><small>${source.url}</small></td>
+                    <td>${statusBadge}</td>
+                    <td>${lastUpdated}</td>
+                    <td><span class="badge bg-info">${source.programs_found}</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-${source.is_enabled ? 'warning' : 'success'}" 
+                                    onclick="toggleSource('epg', ${source.id}, ${!source.is_enabled})" 
+                                    title="${source.is_enabled ? 'Disable' : 'Enable'}">
+                                <i class="bi bi-${source.is_enabled ? 'pause' : 'play'}-circle"></i>
+                            </button>
+                            <button class="btn btn-outline-info" 
+                                    onclick="editSource('epg', ${source.id})" 
+                                    title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" 
+                                    onclick="deleteSource('epg', ${source.id})" 
+                                    title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading EPG sources:', error);
+        showAlert('Error loading EPG sources', 'danger');
+    }
+}
+
+// Show add source modal
+function showAddSourceModal(type) {
+    const title = type === 'scraper' ? 'Add M3U Source' : 'Add EPG Source';
+    const placeholder = type === 'scraper' 
+        ? 'https://example.com/playlist.m3u' 
+        : 'https://example.com/epg.xml';
+    
+    const modalHtml = `
+        <div class="modal fade" id="addSourceModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">${title}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addSourceForm">
+                            <div class="mb-3">
+                                <label class="form-label">URL *</label>
+                                <input type="url" class="form-control" id="sourceUrl" 
+                                       placeholder="${placeholder}" required>
+                                <small class="text-muted">Enter the full URL of the ${type === 'scraper' ? 'M3U playlist' : 'XMLTV EPG file'}</small>
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="sourceEnabled" checked>
+                                    <label class="form-check-label" for="sourceEnabled">
+                                        Enable this source
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Dynamic Update:</strong> Changes apply automatically without restarting the server.
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="addSource('${type}')">
+                            <i class="bi bi-plus-circle"></i> Add Source
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('addSourceModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = new bootstrap.Modal(document.getElementById('addSourceModal'));
+    modal.show();
+}
+
+// Add source
+async function addSource(type) {
+    try {
+        const url = document.getElementById('sourceUrl').value;
+        const isEnabled = document.getElementById('sourceEnabled').checked;
+        
+        if (!url) {
+            showAlert('URL is required', 'warning');
+            return;
+        }
+        
+        const endpoint = type === 'scraper' ? '/api/scraper/sources' : '/api/epg/sources';
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ url, is_enabled: isEnabled })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to add source');
+        }
+        
+        showAlert(`${type === 'scraper' ? 'M3U' : 'EPG'} source added successfully`, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('addSourceModal')).hide();
+        
+        if (type === 'scraper') {
+            loadScraperSources();
+        } else {
+            loadEPGSources();
+        }
+        
+    } catch (error) {
+        console.error('Error adding source:', error);
+        showAlert('Error adding source: ' + error.message, 'danger');
+    }
+}
+
+// Toggle source enabled/disabled
+async function toggleSource(type, id, enabled) {
+    try {
+        const endpoint = type === 'scraper' 
+            ? `/api/scraper/sources/${id}` 
+            : `/api/epg/sources/${id}`;
+        
+        const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ is_enabled: enabled })
+        });
+        
+        if (!response.ok) throw new Error('Failed to update source');
+        
+        showAlert(`Source ${enabled ? 'enabled' : 'disabled'} successfully`, 'success');
+        
+        if (type === 'scraper') {
+            loadScraperSources();
+        } else {
+            loadEPGSources();
+        }
+        
+    } catch (error) {
+        console.error('Error toggling source:', error);
+        showAlert('Error updating source: ' + error.message, 'danger');
+    }
+}
+
+// Edit source
+async function editSource(type, id) {
+    try {
+        const endpoint = type === 'scraper' 
+            ? `/api/scraper/sources` 
+            : `/api/epg/sources`;
+        
+        const response = await fetch(endpoint);
+        const sources = await response.json();
+        const source = sources.find(s => s.id === id);
+        
+        if (!source) throw new Error('Source not found');
+        
+        const title = type === 'scraper' ? 'Edit M3U Source' : 'Edit EPG Source';
+        
+        const modalHtml = `
+            <div class="modal fade" id="editSourceModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">${title}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editSourceForm">
+                                <div class="mb-3">
+                                    <label class="form-label">URL *</label>
+                                    <input type="url" class="form-control" id="editSourceUrl" 
+                                           value="${source.url}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="editSourceEnabled" 
+                                               ${source.is_enabled ? 'checked' : ''}>
+                                        <label class="form-check-label" for="editSourceEnabled">
+                                            Enable this source
+                                        </label>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="saveSource('${type}', ${id})">
+                                <i class="bi bi-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const existingModal = document.getElementById('editSourceModal');
+        if (existingModal) existingModal.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('editSourceModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error loading source:', error);
+        showAlert('Error loading source: ' + error.message, 'danger');
+    }
+}
+
+// Save source
+async function saveSource(type, id) {
+    try {
+        const url = document.getElementById('editSourceUrl').value;
+        const isEnabled = document.getElementById('editSourceEnabled').checked;
+        
+        if (!url) {
+            showAlert('URL is required', 'warning');
+            return;
+        }
+        
+        const endpoint = type === 'scraper' 
+            ? `/api/scraper/sources/${id}` 
+            : `/api/epg/sources/${id}`;
+        
+        const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ url, is_enabled: isEnabled })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to update source');
+        }
+        
+        showAlert('Source updated successfully', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('editSourceModal')).hide();
+        
+        if (type === 'scraper') {
+            loadScraperSources();
+        } else {
+            loadEPGSources();
+        }
+        
+    } catch (error) {
+        console.error('Error updating source:', error);
+        showAlert('Error updating source: ' + error.message, 'danger');
+    }
+}
+
+// Delete source
+async function deleteSource(type, id) {
+    const typeName = type === 'scraper' ? 'M3U' : 'EPG';
+    if (!confirm(`Are you sure you want to delete this ${typeName} source?`)) return;
+    
+    try {
+        const endpoint = type === 'scraper' 
+            ? `/api/scraper/sources/${id}` 
+            : `/api/epg/sources/${id}`;
+        
+        const response = await fetch(endpoint, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete source');
+        
+        showAlert(`${typeName} source deleted successfully`, 'success');
+        
+        if (type === 'scraper') {
+            loadScraperSources();
+        } else {
+            loadEPGSources();
+        }
+        
+    } catch (error) {
+        console.error('Error deleting source:', error);
+        showAlert('Error deleting source: ' + error.message, 'danger');
+    }
+}
 </script>
 {% endblock %}
