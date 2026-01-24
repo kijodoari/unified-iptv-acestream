@@ -26,10 +26,14 @@ Estos valores se aplican **sin reiniciar el servidor**:
   - Se lee en cada iteración del loop
   - Cambios se aplican en el siguiente ciclo
 - **`epg_cache_file`** - Ruta del archivo de cache EPG
-  - Se lee al guardar/cargar cache
-  - Cambios se aplican en la próxima operación
+  - ⚠️ **NOTA**: Setting legacy, no se usa actualmente
+  - El EPG se genera dinámicamente, no se guarda en archivo
+  - Puede eliminarse en futuras versiones
 - **`server_timezone`** - Zona horaria del servidor
-  - Se lee al generar XML EPG
+  - **FASE 8**: Ahora completamente dinámico en todos los usos
+  - Se lee al generar XML EPG (epg_service.py)
+  - Se lee en API Xtream (xtream.py)
+  - Se lee en Dashboard (dashboard.py)
   - Cambios se aplican inmediatamente en la próxima generación
 
 ### 3. AceStream Configuration (Dinámicos)
@@ -63,6 +67,10 @@ Estos valores se leen **solo al iniciar** los servicios y requieren reinicio com
 - `server_host` - Host del servidor (0.0.0.0 = todas las interfaces)
 - `server_port` - Puerto del servidor web
 - `server_debug` - Modo debug (true/false)
+  - **FASE 8**: Ahora controla el nivel de logging completo
+  - `false` → Logs en nivel INFO (producción)
+  - `true` → Logs en nivel DEBUG (desarrollo)
+  - Controla: Auto-reload + Nivel de logging de aplicación + Nivel de logging de Uvicorn
 
 ### AceStream Engine Configuration
 - `acestream_enabled` - Habilitar AceStream Engine (true/false)
@@ -78,7 +86,7 @@ Estos valores se leen **solo al iniciar** los servicios y requieren reinicio com
 - `database_max_overflow` - Máximo de conexiones adicionales
 
 ### Admin Configuration
-- `admin_username` - Nombre de usuario del administrador
+- `admin_username` - Nombre de usuario del administrador (ReadOnly)
 
 **Para estos valores**: Cambiar + `docker-compose restart`
 
@@ -355,4 +363,24 @@ async def _fetch_acestream(self, ongoing: OngoingStream):
 ---
 
 **Última actualización**: 24 de enero de 2026
-**Versión**: 2.0 - Gestión profesional de URLs
+**Versión**: 2.1 - FASE 8: Auditoría completa y correcciones
+
+## 📋 Historial de Cambios
+
+### Versión 2.1 (24 de enero de 2026) - FASE 8
+- ✅ Auditoría completa de implementación de todos los settings
+- ✅ Corrección de `server_debug`: Ahora controla nivel de logging completo
+- ✅ Corrección de `server_timezone`: Completamente dinámico en todos los usos
+- ✅ Verificación de todos los settings: 95.5% implementación real (21/22)
+- ✅ Identificación de `epg_cache_file` como setting legacy no usado
+
+### Versión 2.0 (24 de enero de 2026)
+- ✅ Gestión profesional de URLs con tablas ScraperURL y EPGSource
+- ✅ APIs REST completas para gestión de fuentes
+- ✅ Eliminación de `scraper_urls` y `epg_sources` de Settings
+- ✅ Sistema de colores en panel web (verde/amarillo/gris)
+
+### Versión 1.0 (24 de enero de 2026)
+- ✅ Implementación inicial de settings dinámicos
+- ✅ 9 settings dinámicos funcionando
+- ✅ 13 settings que requieren restart
