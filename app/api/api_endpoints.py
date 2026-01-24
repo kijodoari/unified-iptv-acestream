@@ -10,6 +10,9 @@ from sqlalchemy import func
 
 from app.utils.auth import get_db
 from app.models import Channel, User, Category, ScraperURL, EPGSource
+from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
+import aiohttp
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -309,3 +312,75 @@ async def check_channels(db: Session = Depends(get_db)):
     """Check channel status"""
     # TODO: Implement channel status check
     return {"status": "triggered", "message": "Channel check will start shortly"}
+
+
+@router.get("/hls/{channel_id}/manifest.m3u8")
+async def proxy_hls_manifest(channel_id: int, request: Request, db: Session = Depends(get_db)):
+    """Proxy HLS manifest from AceStream engine to browser"""
+    channel = db.query(Channel).filter(Channel.id == channel_id).first()
+    if not channel or not channel.acestream_id:
+        raise HTTPException(status_code=404, detail="Channel not found or no AceStream ID")
+    
+    acestream_url = f"http://acestream:6878/ace/manifest.m3u8?id={channel.acestream_id}"
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(acestream_url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                if response.status != 200:
+                    raise HTTPException(status_code=response.status, detail="AceStream error")
+                
+                content = await response.text()
+                
+                # Rewrite ALL URLs in manifest to point to our proxy
+                import re
+                base_url = str(request.base_url).rstrip('/')
+                
+                # Replace absolute URLs
+                content = re.sub(
+                    r'http://acestream:6878/ace/',
+                    f'{base_url}/api/hls/{channel_id}/',
+                    content
+                )
+                
+                # Replace relative URLs (lines that don't start with #)
+                lines = content.split('\n')
+                new_lines = []
+                for line in lines:
+                    if line and not line.startswith('#') and not line.startswith('http'):
+                        # It's a relative path, prepend our proxy URL
+                        new_lines.append(f'{base_url}/api/hls/{channel_id}/{line}')
+                    else:
+                        new_lines.append(line)
+                
+                content = '\n'.join(new_lines)
+                
+                return Response(content=content, media_type="application/vnd.apple.mpegurl")
+    except aiohttp.ClientError as e:
+        logger.error(f"Error proxying HLS manifest: {e}")
+        raise HTTPException(status_code=503, detail=f"AceStream connection error: {str(e)}")
+
+
+@router.get("/hls/{channel_id}/{segment:path}")
+async def proxy_hls_segment(channel_id: int, segment: str, db: Session = Depends(get_db)):
+    """Proxy HLS segments from AceStream engine to browser"""
+    channel = db.query(Channel).filter(Channel.id == channel_id).first()
+    if not channel or not channel.acestream_id:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    
+    # Construct AceStream URL
+    acestream_url = f"http://acestream:6878/ace/{segment}"
+    
+    try:
+        async def stream_proxy():
+            async with aiohttp.ClientSession() as session:
+                async with session.get(acestream_url, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    if response.status != 200:
+                        logger.error(f"AceStream segment error: {response.status} for {acestream_url}")
+                        return
+                    async for chunk in response.content.iter_chunked(8192):
+                        yield chunk
+        
+        return StreamingResponse(stream_proxy(), media_type="video/MP2T")
+    except Exception as e:
+        logger.error(f"Error proxying HLS segment {segment}: {e}")
+        raise HTTPException(status_code=503, detail=f"Segment streaming error: {str(e)}")

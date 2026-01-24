@@ -6,7 +6,34 @@ Este documento contiene ejemplos prácticos paso a paso para usar la plataforma.
 
 ---
 
-## 🎯 Caso de Uso 1: Ver un Canal en VLC (Más Rápido)
+## 🎯 Caso de Uso 1: Ver un Canal en el Dashboard Web (Más Fácil)
+
+### Paso 1: Acceder al Dashboard
+1. Abre el navegador en http://localhost:6880
+2. Inicia sesión con:
+   - Usuario: `admin`
+   - Contraseña: `Admin2024!Secure`
+
+### Paso 2: Reproducir un Canal
+1. Ve a la sección **Channels**
+2. Busca el canal que quieres ver
+3. Haz clic en el botón **Play** (▶️)
+4. El reproductor se abre automáticamente en un modal
+5. ¡El canal comienza a reproducirse!
+
+**Ventajas**:
+- No necesitas instalar nada
+- Reproduce directamente en el navegador
+- Interfaz moderna con controles nativos
+- Información del canal visible
+
+**Tecnología**:
+- Formato: HLS (HTTP Live Streaming)
+- Compatible con todos los navegadores modernos
+
+---
+
+## 🎯 Caso de Uso 2: Ver un Canal en VLC (Para Pruebas)
 
 ### Paso 1: Obtener la URL del Canal
 1. Abre el navegador en http://localhost:6880
@@ -31,7 +58,7 @@ http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 
 ---
 
-## 🎯 Caso de Uso 2: Configurar IPTV Smarters (Android/iOS)
+## 🎯 Caso de Uso 3: Configurar IPTV Smarters (Android/iOS)
 
 ### Paso 1: Instalar la App
 - **Android**: Descarga desde Google Play Store
@@ -58,7 +85,7 @@ http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 
 ---
 
-## 🎯 Caso de Uso 3: Configurar TiviMate (Android TV)
+## 🎯 Caso de Uso 4: Configurar TiviMate (Android TV)
 
 ### Paso 1: Instalar TiviMate
 1. Abre Google Play Store en tu Android TV
@@ -89,7 +116,7 @@ http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 
 ---
 
-## 🎯 Caso de Uso 4: Usar Playlist M3U en Cualquier Reproductor
+## 🎯 Caso de Uso 5: Usar Playlist M3U en Cualquier Reproductor
 
 ### Obtener la Playlist
 La URL de la playlist M3U es:
@@ -116,9 +143,15 @@ http://localhost:6880/get.php?username=admin&password=Admin2024!Secure&type=m3u_
 
 ---
 
-## 🎯 Caso de Uso 5: Verificar que un Stream Funciona
+## 🎯 Caso de Uso 6: Verificar que un Stream Funciona
 
-### Usando ffprobe (Técnico)
+### Método 1: Desde el Dashboard (Más Fácil)
+1. Ve a http://localhost:6880/channels
+2. Haz clic en el botón **Play** (▶️) de cualquier canal
+3. Si el reproductor se abre y muestra video = funciona ✅
+4. Si no reproduce, prueba otro canal
+
+### Método 2: Usando ffprobe (Técnico)
 ```bash
 ffprobe http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 ```
@@ -129,14 +162,14 @@ ffprobe http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 - `format_name=mpegts` - Formato MPEG-TS ✅
 - `width=1280` y `height=720` - Resolución ✅
 
-### Usando VLC (Simple)
+### Método 3: Usando VLC (Simple)
 1. Abre la URL del stream en VLC
 2. Si ves video y escuchas audio = funciona ✅
 3. Si ves "buffering" constante = el canal puede estar offline o lento
 
 ---
 
-## 🎯 Caso de Uso 6: Acceder desde Otro Dispositivo en la Red
+## 🎯 Caso de Uso 7: Acceder desde Otro Dispositivo en la Red
 
 ### Paso 1: Encontrar tu IP Local
 **En Windows**:
@@ -176,7 +209,7 @@ http://192.168.1.100:6880
 
 ---
 
-## 🎯 Caso de Uso 7: Agregar Canales Manualmente
+## 🎯 Caso de Uso 8: Agregar Canales Manualmente
 
 ### Desde el Dashboard
 1. Ve a http://localhost:6880/channels
@@ -196,7 +229,7 @@ cc7b8c39f70aa342248d02c8ab55bafdb4116ed7
 
 ---
 
-## 🎯 Caso de Uso 8: Configurar Scraper Automático
+## 🎯 Caso de Uso 9: Configurar Scraper Automático
 
 ### Agregar Fuentes de Canales
 1. Ve a http://localhost:6880/scraper
@@ -219,7 +252,7 @@ SCRAPER_UPDATE_INTERVAL=86400  # 24 horas en segundos
 
 ---
 
-## 🎯 Caso de Uso 9: Configurar EPG (Guía de Programación)
+## 🎯 Caso de Uso 10: Configurar EPG (Guía de Programación)
 
 ### Agregar Fuentes EPG
 1. Ve a http://localhost:6880/epg
@@ -239,7 +272,7 @@ https://wafy80.github.io/epg_light.xml
 
 ---
 
-## 🎯 Caso de Uso 10: Monitorear el Sistema
+## 🎯 Caso de Uso 11: Monitorear el Sistema
 
 ### Ver Estado del Sistema
 1. Ve a http://localhost:6880
@@ -294,12 +327,20 @@ docker-compose logs unified-iptv
 
 ### Problema: "El stream no reproduce"
 **Solución**:
-1. Verifica con ffprobe que el stream funciona:
+1. Verifica que el reproductor del dashboard funciona:
+   - Ve a http://localhost:6880/channels
+   - Haz clic en Play
+   - Si reproduce = el sistema funciona ✅
+2. Si no reproduce en el dashboard:
    ```bash
-   ffprobe http://localhost:6880/live/admin/Admin2024!Secure/22.ts
+   # Verificar que AceStream Engine está corriendo
+   docker-compose ps
+   
+   # Ver logs de AceStream
+   docker-compose logs acestream --tail 50
    ```
-2. Si ffprobe muestra video y audio = el stream funciona, usa VLC o cliente IPTV
-3. Si ffprobe da error = el canal puede estar offline, prueba otro
+3. Si ffprobe muestra video y audio = el stream funciona, usa VLC o cliente IPTV
+4. Si ffprobe da error = el canal puede estar offline, prueba otro
 
 ### Problema: "No hay canales"
 **Solución**:

@@ -37,15 +37,55 @@ http://localhost:6880/xmltv.php?username=admin&password=Admin2024!Secure
 
 ## 🎬 Reproducción de Canales
 
-### ⚠️ IMPORTANTE: Limitación del Navegador Web
+### ✅ Reproducción en el Navegador Web (Dashboard)
 
-**Los navegadores web NO pueden reproducir streams MPEG-TS en vivo directamente**. Esto es una limitación técnica de HTML5 Video, no un problema de la plataforma.
+El dashboard incluye un **reproductor HTML5 con HLS** que reproduce streams directamente en el navegador.
 
-**Los streams SÍ funcionan correctamente** (verificado con ffprobe), pero necesitas usar un reproductor especializado.
+**Cómo usar**:
+1. Accede a http://localhost:6880
+2. Ve a la sección **Channels**
+3. Haz clic en el botón **Play** (▶️) del canal
+4. El reproductor se abrirá automáticamente y comenzará la reproducción
+
+**Tecnología utilizada**:
+- Formato: HLS (HTTP Live Streaming)
+- Librería: hls.js 1.4.12
+- URL proxy: `http://localhost:6880/api/hls/{channel_id}/manifest.m3u8`
+- Compatible con todos los navegadores modernos (Chrome, Firefox, Edge, Safari)
+
+### ⚠️ IMPORTANTE: Dos Métodos de Reproducción
+
+La plataforma soporta dos formatos de streaming diferentes según el uso:
+
+#### 1. Para Navegador Web (Dashboard)
+- **Formato**: HLS (HTTP Live Streaming)
+- **URL**: `http://localhost:6880/api/hls/{channel_id}/manifest.m3u8`
+- **Uso**: Reproducción directa en el navegador con hls.js
+- **Ventaja**: No necesitas instalar nada, reproduce en el navegador
+- **Proxy**: Las URLs se reescriben automáticamente para funcionar desde el navegador
+
+#### 2. Para Reproductores Externos (VLC, IPTV Smarters)
+- **Formato**: MPEG-TS
+- **URL**: `http://localhost:6880/live/admin/Admin2024!Secure/{CHANNEL_ID}.ts`
+- **Uso**: VLC, clientes IPTV, reproductores especializados
+- **Ventaja**: Mejor rendimiento y estabilidad
 
 ### ✅ Métodos de Reproducción Recomendados
 
-#### 1. VLC Media Player (Más Simple)
+#### 1. Dashboard Web (Más Fácil)
+1. Accede a http://localhost:6880
+2. Ve a la sección **Channels**
+3. Haz clic en el botón **Play** (▶️)
+4. El reproductor se abre automáticamente en el navegador
+5. ¡Disfruta del contenido!
+
+**Ventajas**:
+- No necesitas instalar nada
+- Reproduce directamente en el navegador con hls.js
+- Interfaz moderna e intuitiva
+- Proxy HLS automático
+
+#### 2. VLC Media Player (Para Pruebas Rápidas)
 1. Descarga VLC: https://www.videolan.org/
 2. Abre VLC
 3. Ve a **Media → Abrir ubicación de red**
@@ -90,18 +130,19 @@ http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 
 #### 3. Desde el Dashboard Web
 
-El dashboard web ahora muestra:
-- ✅ Información del canal
-- ✅ URL del stream para copiar
-- ✅ Instrucciones de reproducción
-- ✅ Botón para abrir el stream en VLC u otro reproductor
+El dashboard web ahora incluye un **reproductor funcional** que:
+- ✅ Reproduce streams directamente en el navegador (HLS)
+- ✅ Muestra información del canal
+- ✅ Proporciona URL MPEG-TS para reproductores externos
+- ✅ Botón para copiar URL fácilmente
+- ✅ Enlace para abrir en reproductor externo
 
 **Pasos**:
 1. Accede a http://localhost:6880
 2. Ve a la sección **Channels**
 3. Haz clic en el botón **Play** (▶️) del canal
-4. Copia la URL del stream
-5. Pégala en VLC o tu reproductor favorito
+4. El reproductor se abre automáticamente
+5. Para usar en reproductor externo: copia la URL MPEG-TS mostrada en el modal
 
 ## 🔧 Verificación de Streams
 
@@ -167,9 +208,10 @@ Para acceder desde otros dispositivos en tu red local:
 - Revisa los logs: `docker-compose logs unified-iptv`
 
 ### El stream no reproduce en el navegador
-- **Esto es normal**: Los navegadores no soportan MPEG-TS en vivo
-- **Solución**: Usa VLC, IPTV Smarters u otro cliente IPTV
-- Los streams SÍ funcionan (verificado con ffprobe)
+- **Solución**: El dashboard ahora incluye reproductor HLS funcional
+- Haz clic en el botón Play del canal
+- El reproductor se abre automáticamente
+- Si no funciona, verifica que AceStream Engine esté corriendo: `docker-compose ps`
 
 ### El stream no reproduce en VLC
 - Verifica que AceStream Engine esté corriendo: `docker-compose ps`

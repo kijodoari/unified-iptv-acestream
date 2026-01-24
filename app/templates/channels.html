@@ -136,10 +136,16 @@ async function playChannel(id) {
         
         const channel = await response.json();
         
-        // Build stream URL using admin credentials from backend
+        if (!channel.acestream_id) {
+            showAlert('Este canal no tiene AceStream ID configurado', 'warning');
+            return;
+        }
+        
+        // Build URLs
         const username = '{{ admin_username }}';
         const password = '{{ admin_password }}';
-        const streamUrl = `/live/${username}/${password}/${id}.ts`;
+        const streamUrlTs = `/live/${username}/${password}/${id}.ts`;
+        const hlsUrl = `/api/hls/${id}/manifest.m3u8`;
         
         // Create modal with video player
         const modalHtml = `
@@ -154,58 +160,25 @@ async function playChannel(id) {
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i>
-                                <strong>Reproducción de Streams AceStream:</strong>
-                                <ul class="mb-0 mt-2">
-                                    <li>Los navegadores no pueden reproducir streams MPEG-TS directamente</li>
-                                    <li>Usa VLC, IPTV Smarters, Perfect Player o TiviMate para reproducir</li>
-                                    <li>Copia la URL del stream y ábrela en tu reproductor favorito</li>
-                                </ul>
-                            </div>
-                            <div class="card">
-                                <div class="card-body">
-                                    <h6>Información del Canal</h6>
-                                    <p><strong>Nombre:</strong> ${channel.name}</p>
-                                    <p><strong>Categoría:</strong> ${channel.category || 'N/A'}</p>
-                                    <p><strong>AceStream ID:</strong> <code>${channel.acestream_id || 'N/A'}</code></p>
-                                    <hr>
-                                    <h6>URL del Stream</h6>
-                                    <div class="input-group mb-3">
-                                        <input type="text" class="form-control" id="streamUrlInput" value="${window.location.origin}${streamUrl}" readonly>
-                                        <button class="btn btn-outline-secondary" type="button" onclick="copyStreamUrl()">
-                                            <i class="bi bi-clipboard"></i> Copiar
-                                        </button>
-                                    </div>
-                                    <hr>
-                                    <h6>Cómo Reproducir</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <h6 class="text-muted small">VLC Media Player</h6>
-                                            <ol class="small">
-                                                <li>Abre VLC</li>
-                                                <li>Media → Abrir ubicación de red</li>
-                                                <li>Pega la URL del stream</li>
-                                                <li>Reproducir</li>
-                                            </ol>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <h6 class="text-muted small">IPTV Smarters / Perfect Player</h6>
-                                            <ol class="small">
-                                                <li>Configura Xtream Codes API</li>
-                                                <li>URL: http://localhost:6880</li>
-                                                <li>Usuario: ${username}</li>
-                                                <li>Contraseña: ${password}</li>
-                                            </ol>
-                                        </div>
-                                    </div>
+                            <video id="channelPlayer" controls autoplay style="width: 100%; max-height: 70vh; background: #000;"></video>
+                            <div class="mt-3">
+                                <p><strong>Categoría:</strong> ${channel.category || 'N/A'}</p>
+                                <p><strong>AceStream ID:</strong> <code>${channel.acestream_id}</code></p>
+                                <hr>
+                                <h6>URL para Reproductores Externos (VLC, IPTV Smarters)</h6>
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control form-control-sm" id="streamUrlInput" value="${window.location.origin}${streamUrlTs}" readonly>
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" onclick="copyStreamUrl()">
+                                        <i class="bi bi-clipboard"></i> Copiar
+                                    </button>
                                 </div>
+                                <small class="text-muted">Usa esta URL en VLC, IPTV Smarters, Perfect Player, TiviMate, etc.</small>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <a href="${streamUrl}" class="btn btn-primary" target="_blank">
-                                <i class="bi bi-box-arrow-up-right"></i> Abrir Stream
+                            <a href="${streamUrlTs}" class="btn btn-primary" target="_blank">
+                                <i class="bi bi-box-arrow-up-right"></i> Abrir en Reproductor Externo
                             </a>
                         </div>
                     </div>
@@ -225,6 +198,39 @@ async function playChannel(id) {
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('playerModal'));
         modal.show();
+        
+        // Initialize HLS player
+        const video = document.getElementById('channelPlayer');
+        if (Hls.isSupported()) {
+            const hls = new Hls();
+            hls.loadSource(hlsUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+            });
+            
+            // Store hls instance for cleanup
+            video.hlsInstance = hls;
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            video.src = hlsUrl;
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+            });
+        }
+        
+        // Clean up when modal is closed
+        document.getElementById('playerModal').addEventListener('hidden.bs.modal', function () {
+            const player = document.getElementById('channelPlayer');
+            if (player) {
+                if (player.hlsInstance) {
+                    player.hlsInstance.destroy();
+                }
+                player.pause();
+                player.src = '';
+            }
+            this.remove();
+        });
         
     } catch (error) {
         console.error('Error playing channel:', error);

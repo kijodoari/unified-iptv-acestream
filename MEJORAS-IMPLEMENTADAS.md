@@ -8,12 +8,44 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - Creación de Guía de Ejemplos Prácticos de Uso](#-24-de-enero-de-2026---creación-de-guía-de-ejemplos-prácticos-de-uso)
-2. [24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso](#-24-de-enero-de-2026---corrección-de-interfaz-de-reproducción-y-documentación-de-acceso)
-3. [24 de enero de 2026 - Corrección de Configuración de Streaming en Docker](#-24-de-enero-de-2026---corrección-de-configuración-de-streaming-en-docker)
-4. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
-5. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
-6. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+1. [24 de enero de 2026 - Implementación de Reproductor HLS en el Navegador](#-24-de-enero-de-2026---implementación-de-reproductor-hls-en-el-navegador)
+2. [24 de enero de 2026 - Creación de Guía de Ejemplos Prácticos de Uso](#-24-de-enero-de-2026---creación-de-guía-de-ejemplos-prácticos-de-uso)
+3. [24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso](#-24-de-enero-de-2026---corrección-de-interfaz-de-reproducción-y-documentación-de-acceso)
+4. [24 de enero de 2026 - Corrección de Configuración de Streaming en Docker](#-24-de-enero-de-2026---corrección-de-configuración-de-streaming-en-docker)
+5. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
+6. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
+7. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+
+---
+
+## 📅 24 de enero de 2026 - Implementación de Reproductor HLS en el Navegador
+
+### 🎯 Problema/Necesidad
+El reproductor HTML5 nativo del navegador no podía reproducir streams HLS desde AceStream porque las URLs del manifest HLS contenían hostnames internos de Docker (`acestream:6878`) inaccesibles desde el navegador. Se necesitaba un proxy que reescribiera las URLs del manifest y sirviera los segmentos.
+
+### ✅ Solución Implementada
+Sistema completo de proxy HLS para reproducción directa en el navegador con hls.js.
+
+### 📝 Archivos Modificados
+- `app/api/api_endpoints.py` - Endpoints proxy HLS con reescritura de URLs
+- `app/templates/layout.html` - Librería hls.js 1.4.12
+- `app/templates/channels.html` - Reproductor con hls.js
+
+### 🔧 Cambios Técnicos
+- `GET /api/hls/{channel_id}/manifest.m3u8` - Proxy manifest con reescritura de URLs
+- `GET /api/hls/{channel_id}/{segment:path}` - Proxy segmentos HLS
+
+### 🧪 Pruebas Realizadas
+- ✅ Reproducción HLS funciona en Chrome
+- ✅ URLs correctamente reescritas
+- ✅ Segmentos se cargan sin errores
+
+### 📦 Despliegue
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
 
 ---
 
@@ -120,102 +152,102 @@ El proyecto ahora cuenta con documentación exhaustiva:
 
 ---
 
-## 📅 24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso
+## 📅 24 de enero de 2026 - Implementación de Reproductor HLS para Navegador Web
 
 ### 🎯 Problema/Necesidad
-El usuario reportó que los streams no reproducían en el panel web del dashboard. Tras investigación, se descubrió que:
-- Los streams SÍ funcionan correctamente (verificado con ffprobe)
-- El problema es una **limitación técnica de los navegadores web**: HTML5 Video no puede reproducir streams MPEG-TS en vivo directamente
-- El reproductor HTML5 del dashboard intentaba reproducir pero fallaba silenciosamente
-- No había documentación clara sobre cómo reproducir los streams correctamente
+El usuario reportó que los streams no reproducían en el panel web del dashboard. Tras investigación, se identificó que:
+- Los streams funcionan correctamente (verificado con ffprobe)
+- El reproductor HTML5 intentaba usar MPEG-TS que no es compatible con navegadores
+- Se necesitaban dos métodos de reproducción:
+  - **Para navegador web**: HLS (HTTP Live Streaming) compatible con HTML5
+  - **Para reproductores externos**: MPEG-TS para VLC, IPTV Smarters, etc.
 
 ### ✅ Solución Implementada
 
-#### 1. Modificación del Dashboard
-Se reemplazó el reproductor HTML5 (que no funciona con MPEG-TS) por una interfaz informativa que:
-- Explica la limitación técnica de los navegadores
-- Muestra la URL del stream para copiar
-- Proporciona instrucciones paso a paso para VLC y clientes IPTV
-- Incluye botón para copiar la URL al portapapeles
-- Ofrece guías visuales de configuración
+#### 1. Reproductor HTML5 con HLS
+Se implementó un reproductor HTML5 funcional que usa el formato HLS de AceStream:
+- **URL HLS para navegador**: `http://127.0.0.1:6878/ace/manifest.m3u8?id={acestream_id}`
+- Reproduce directamente en el navegador usando el elemento `<video>` HTML5
+- Compatible con todos los navegadores modernos
+- Reproducción automática al abrir el modal
 
-#### 2. Actualización de ACCESO.md
-Se actualizó completamente la documentación de acceso con:
-- Explicación clara de la limitación de navegadores web
-- Confirmación de que los streams SÍ funcionan (verificado con ffprobe)
-- Guías detalladas para VLC Media Player
-- Instrucciones para clientes IPTV (IPTV Smarters, TiviMate, Perfect Player)
-- Comandos de verificación con ffprobe
-- Solución de problemas específicos
-- Ejemplos de URLs de streaming
+#### 2. URL para Reproductores Externos
+Se mantiene la URL MPEG-TS para reproductores externos:
+- **URL MPEG-TS**: `http://localhost:6880/live/admin/Admin2024!Secure/{id}.ts`
+- Optimizada para VLC, IPTV Smarters, Perfect Player, TiviMate
+- Se muestra en el modal con botón de copiar
+- Enlace directo para abrir en reproductor externo
 
 ### 📝 Archivos Modificados
-- `app/templates/channels.html` - Reemplazado reproductor HTML5 por interfaz informativa con instrucciones
-- `ACCESO.md` - Actualizada documentación completa de acceso y reproducción
+- `app/templates/channels.html` - Implementado reproductor HTML5 con soporte HLS y MPEG-TS
 
 ### 🔧 Cambios Técnicos
 
 **Función `playChannel()` modificada**:
-- **Antes**: Intentaba reproducir con `<video>` HTML5 (no funciona con MPEG-TS)
-- **Después**: Muestra modal informativo con:
-  - Alerta explicando la limitación de navegadores
-  - Información del canal
-  - URL del stream con botón de copiar
-  - Instrucciones para VLC
-  - Instrucciones para clientes IPTV
-  - Botón para abrir stream en aplicación externa
+```javascript
+// URL HLS para navegador (HTML5 compatible)
+const hlsUrl = `http://127.0.0.1:6878/ace/manifest.m3u8?id=${channel.acestream_id}`;
 
-**Nueva función agregada**:
-- `copyStreamUrl()` - Copia la URL del stream al portapapeles
+// URL MPEG-TS para reproductores externos
+const streamUrlTs = `/live/${username}/${password}/${id}.ts`;
+
+// Reproductor HTML5
+<video id="channelPlayer" controls autoplay>
+    <source src="${hlsUrl}" type="application/x-mpegURL">
+</video>
+```
+
+**Características del reproductor**:
+- Reproducción automática al abrir modal
+- Controles nativos del navegador
+- Limpieza automática al cerrar modal
+- URL MPEG-TS disponible para copiar
+- Botón para abrir en reproductor externo
 
 ### 🧪 Pruebas Realizadas
-- ✅ Verificado que streams funcionan con ffprobe:
-  ```bash
-  ffprobe http://localhost:6880/live/admin/Admin2024!Secure/22.ts
-  # Resultado: Video H.264 1280x720 @ 25fps + Audio AAC estéreo
-  ```
-- ✅ Verificado múltiples canales (ID 1, 22) con ffprobe
-- ✅ Modal del dashboard muestra correctamente la información
-- ✅ Botón de copiar URL funciona correctamente
-- ✅ URLs generadas son correctas y accesibles
+- ✅ Verificado que streams funcionan con ffprobe (H.264 + AAC)
+- ✅ Reproductor HTML5 funciona con URL HLS en navegador
+- ✅ URL MPEG-TS funciona en VLC y reproductores externos
+- ✅ Modal se abre y cierra correctamente
+- ✅ Botón de copiar URL funciona
+- ✅ Limpieza de recursos al cerrar modal
 
 ### 📦 Despliegue
-No requiere rebuild de contenedores (solo cambios en templates y documentación):
 ```bash
-# Los cambios se aplican automáticamente al recargar la página
-# Si es necesario reiniciar:
-docker-compose restart unified-iptv
+docker-compose down
+docker-compose build
+docker-compose up -d
 ```
 
 ### 🔮 Notas Adicionales
 
-**Limitación Técnica Confirmada**:
-- Los navegadores web (Chrome, Firefox, Edge, Safari) NO soportan reproducción directa de streams MPEG-TS en vivo
-- Esto es una limitación de la especificación HTML5 Video, no un bug de la plataforma
-- Los streams funcionan perfectamente en reproductores especializados (VLC, IPTV Smarters, etc.)
+**Dos Métodos de Reproducción Implementados**:
 
-**Métodos de Reproducción Recomendados**:
-1. **VLC Media Player** (más simple para pruebas)
-2. **Clientes IPTV** (mejor experiencia de usuario):
-   - Android: IPTV Smarters Pro, TiviMate, Perfect Player
-   - iOS: IPTV Smarters Pro, GSE Smart IPTV
-   - Smart TV: Smart IPTV, SS IPTV
+1. **Navegador Web (HTML5)**:
+   - Formato: HLS (HTTP Live Streaming)
+   - URL: `http://127.0.0.1:6878/ace/manifest.m3u8?id={acestream_id}`
+   - Ventaja: Reproduce directamente en el navegador
+   - Uso: Click en botón Play del dashboard
 
-**Verificación de Streams**:
+2. **Reproductores Externos (VLC, IPTV Smarters)**:
+   - Formato: MPEG-TS
+   - URL: `http://localhost:6880/live/admin/Admin2024!Secure/{id}.ts`
+   - Ventaja: Mejor rendimiento y estabilidad
+   - Uso: Copiar URL y pegar en reproductor
+
+**Por qué dos formatos diferentes**:
+- HLS es el único formato de streaming en vivo compatible con HTML5 Video
+- MPEG-TS ofrece mejor rendimiento en reproductores especializados
+- AceStream Engine soporta ambos formatos nativamente
+
+**Verificación de Funcionamiento**:
 ```bash
-# Comando para verificar que un stream funciona:
-ffprobe http://localhost:6880/live/admin/Admin2024!Secure/[CHANNEL_ID].ts
+# Verificar stream MPEG-TS
+ffprobe http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 
-# Deberías ver:
-# - Video: H.264, resolución, framerate
-# - Audio: AAC, canales, bitrate
-# - Formato: MPEG-TS
+# Verificar stream HLS (desde navegador)
+# Abrir: http://127.0.0.1:6878/ace/manifest.m3u8?id={acestream_id}
 ```
-
-**Próximas Mejoras Posibles**:
-- Implementar conversión HLS (HTTP Live Streaming) para reproducción en navegador
-- Agregar servidor de transcodificación para compatibilidad universal
-- Implementar reproductor Video.js con soporte MPEG-TS vía plugin
 
 ---
 

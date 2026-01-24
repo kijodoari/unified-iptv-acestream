@@ -11,7 +11,7 @@ A unified IPTV platform that combines the best of acestream-scraper, pyacexy, an
 ### Guías de Usuario
 - **[INSTALACION-COMPLETA.md](./INSTALACION-COMPLETA.md)** - Guía completa de instalación, compilación y despliegue con Docker
 - **[ACCESO.md](./ACCESO.md)** - Guía de acceso, configuración de clientes IPTV y reproducción de streams
-- **[EJEMPLOS-USO.md](./EJEMPLOS-USO.md)** - Ejemplos prácticos paso a paso para casos de uso comunes
+- **[EJEMPLOS-USO.md](./EJEMPLOS-USO.md)** - 11 casos de uso prácticos paso a paso
 
 ### Documentación Técnica
 - **[API-REFERENCE.md](./API-REFERENCE.md)** - Referencia completa de todas las APIs disponibles (40+ endpoints)
@@ -19,14 +19,6 @@ A unified IPTV platform that combines the best of acestream-scraper, pyacexy, an
 
 ### Información General
 - **[README.md](./README.md)** - Este documento: descripción general y características
-
-### ⚠️ Nota Importante sobre Reproducción
-Los navegadores web **NO pueden reproducir streams MPEG-TS en vivo directamente** (limitación de HTML5 Video). Los streams funcionan perfectamente en:
-- **VLC Media Player** (recomendado para pruebas rápidas)
-- **Clientes IPTV**: IPTV Smarters, TiviMate, Perfect Player, GSE Smart IPTV
-- **Kodi** con addon PVR IPTV Simple Client
-
-Ver [ACCESO.md](./ACCESO.md) y [EJEMPLOS-USO.md](./EJEMPLOS-USO.md) para instrucciones detalladas.
 
 ---
 
@@ -38,7 +30,7 @@ Ver [ACCESO.md](./ACCESO.md) y [EJEMPLOS-USO.md](./EJEMPLOS-USO.md) para instruc
 - **Integrated AceStream Proxy**: Intelligent stream management with multiplexing
 - **Complete EPG**: Electronic Program Guide with aggregation from multiple sources
 - **User Management**: Complete authentication and authorization system
-- **Web Dashboard**: Modern and intuitive administration interface
+- **Web Dashboard**: Modern and intuitive administration interface with HTML5 HLS player
 
 ### Advanced Features
 - Integrated AceStream Engine with Acexy proxy
