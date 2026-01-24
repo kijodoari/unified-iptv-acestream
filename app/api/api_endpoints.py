@@ -1,6 +1,7 @@
 """
 API endpoints for dashboard data
 """
+import asyncio
 import logging
 import time
 import json
@@ -359,7 +360,7 @@ async def check_channels(request: Request, background_tasks: BackgroundTasks, db
 
 
 async def check_channels_background(aceproxy_service, db: Session):
-    """Background task for checking channels"""
+    """Background task for checking channels - PARALLEL execution"""
     try:
         start_time = time.time()
         channels = db.query(Channel).filter(Channel.is_active == True).all()
@@ -376,34 +377,64 @@ async def check_channels_background(aceproxy_service, db: Session):
         
         logger.info(f"Background check: Found {total_channels} channels")
         
-        for index, channel in enumerate(channels, 1):
-            if not channel.acestream_id:
-                skipped += 1
-                continue
-            
+        # Separate channels with and without acestream_id
+        channels_to_check = [ch for ch in channels if ch.acestream_id]
+        skipped = total_channels - len(channels_to_check)
+        
+        if skipped > 0:
+            logger.info(f"Skipping {skipped} channels without AceStream ID")
+        
+        # Check channels in parallel (batches of 10 to avoid overwhelming AceStream engine)
+        batch_size = 10
+        
+        async def check_single_channel(channel, index):
+            """Check a single channel"""
             try:
+                logger.info(f"[{index}/{len(channels_to_check)}] Checking {channel.name}")
                 is_available = await aceproxy_service.check_stream_availability(channel.acestream_id)
                 channel.is_online = is_available
+                channel.last_checked = datetime.utcnow()
                 channel.updated_at = datetime.utcnow()
                 
-                if is_available:
+                status = "ONLINE" if is_available else "OFFLINE"
+                logger.info(f"[{index}/{len(channels_to_check)}] {status}: {channel.name}")
+                
+                return is_available
+            except Exception as e:
+                logger.warning(f"[{index}/{len(channels_to_check)}] Error checking {channel.name}: {e}")
+                channel.is_online = False
+                channel.last_checked = datetime.utcnow()
+                channel.updated_at = datetime.utcnow()
+                return False
+        
+        # Process in batches
+        for i in range(0, len(channels_to_check), batch_size):
+            batch = channels_to_check[i:i + batch_size]
+            batch_start = i + 1
+            
+            logger.info(f"Processing batch {i//batch_size + 1}/{(len(channels_to_check) + batch_size - 1)//batch_size} ({len(batch)} channels)")
+            
+            # Check all channels in batch in parallel
+            tasks = [check_single_channel(ch, batch_start + idx) for idx, ch in enumerate(batch)]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Count results
+            for result in results:
+                if isinstance(result, Exception):
+                    offline += 1
+                elif result:
                     online += 1
                 else:
                     offline += 1
-                
                 checked += 1
-                
-            except Exception as e:
-                logger.warning(f"Error checking channel {channel.id}: {e}")
-                channel.is_online = False
-                channel.updated_at = datetime.utcnow()
-                offline += 1
-                checked += 1
+            
+            # Commit after each batch
+            db.commit()
+            logger.info(f"Batch complete: {checked}/{len(channels_to_check)} checked ({online} online, {offline} offline)")
         
-        db.commit()
         elapsed = time.time() - start_time
         
-        logger.info(f"=== BACKGROUND CHECK COMPLETED: {checked} checked, {online} online, {offline} offline in {elapsed:.2f}s ===")
+        logger.info(f"=== BACKGROUND CHECK COMPLETED: {checked} checked, {online} online, {offline} offline, {skipped} skipped in {elapsed:.2f}s ===")
         
     except Exception as e:
         logger.error(f"Error in background check: {e}", exc_info=True)
@@ -411,12 +442,12 @@ async def check_channels_background(aceproxy_service, db: Session):
 
 @router.get("/channels/check/stream")
 async def check_channels_stream(request: Request, db: Session = Depends(get_db)):
-    """Check channel status with real-time progress via Server-Sent Events"""
+    """Check channel status with real-time progress via Server-Sent Events - PARALLEL"""
     from main import aceproxy_service
     
     async def event_generator():
         try:
-            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting channel check...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting parallel channel check...'})}\n\n"
             
             if not aceproxy_service:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'AceProxy service not initialized'})}\n\n"
@@ -430,52 +461,92 @@ async def check_channels_stream(request: Request, db: Session = Depends(get_db))
                 return
             
             total_channels = len(channels)
+            
+            # Separate channels with and without acestream_id
+            channels_to_check = [ch for ch in channels if ch.acestream_id]
+            skipped = total_channels - len(channels_to_check)
+            
+            if skipped > 0:
+                yield f"data: {json.dumps({'type': 'info', 'message': f'Found {len(channels_to_check)} channels to check ({skipped} skipped without AceStream ID)'})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'info', 'message': f'Found {len(channels_to_check)} channels to check'})}\n\n"
+            
             checked = 0
             online = 0
             offline = 0
-            skipped = 0
             
-            yield f"data: {json.dumps({'type': 'info', 'message': f'Found {total_channels} channels to check'})}\n\n"
+            # Check channels in parallel (batches of 10 to avoid overwhelming AceStream engine)
+            batch_size = 10
             
-            for index, channel in enumerate(channels, 1):
-                if not channel.acestream_id:
-                    skipped += 1
-                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name, 'status': 'skipped', 'reason': 'No AceStream ID'}})}\n\n"
-                    continue
-                
+            async def check_single_channel(channel, index):
+                """Check a single channel and return result"""
                 try:
                     check_start = time.time()
-                    yield f"data: {json.dumps({'type': 'checking', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name}})}\n\n"
-                    
                     is_available = await aceproxy_service.check_stream_availability(channel.acestream_id)
                     check_elapsed = time.time() - check_start
                     
                     channel.is_online = is_available
+                    channel.last_checked = datetime.utcnow()
                     channel.updated_at = datetime.utcnow()
                     
-                    if is_available:
-                        online += 1
-                        status = "online"
+                    status = "online" if is_available else "offline"
+                    
+                    return {
+                        'success': True,
+                        'channel': channel,
+                        'status': status,
+                        'check_time': round(check_elapsed, 2),
+                        'index': index
+                    }
+                except Exception as e:
+                    channel.is_online = False
+                    channel.last_checked = datetime.utcnow()
+                    channel.updated_at = datetime.utcnow()
+                    
+                    return {
+                        'success': False,
+                        'channel': channel,
+                        'status': 'error',
+                        'error': str(e),
+                        'index': index
+                    }
+            
+            # Process in batches
+            for batch_num, i in enumerate(range(0, len(channels_to_check), batch_size), 1):
+                batch = channels_to_check[i:i + batch_size]
+                batch_start = i + 1
+                
+                yield f"data: {json.dumps({'type': 'batch_start', 'batch': batch_num, 'size': len(batch), 'message': f'Checking batch {batch_num} ({len(batch)} channels in parallel)...'})}\n\n"
+                
+                # Check all channels in batch in parallel
+                tasks = [check_single_channel(ch, batch_start + idx) for idx, ch in enumerate(batch)]
+                results = await asyncio.gather(*tasks)
+                
+                # Process results and send updates
+                for result in results:
+                    channel = result['channel']
+                    
+                    if result['success']:
+                        if result['status'] == 'online':
+                            online += 1
+                        else:
+                            offline += 1
+                        
+                        yield f"data: {json.dumps({'type': 'progress', 'index': result['index'], 'total': len(channels_to_check), 'channel': {'id': channel.id, 'name': channel.name, 'status': result['status'], 'check_time': result['check_time']}, 'stats': {'checked': checked + 1, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
                     else:
                         offline += 1
-                        status = "offline"
+                        yield f"data: {json.dumps({'type': 'progress', 'index': result['index'], 'total': len(channels_to_check), 'channel': {'id': channel.id, 'name': channel.name, 'status': 'error', 'error': result['error']}, 'stats': {'checked': checked + 1, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
                     
                     checked += 1
-                    
-                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name, 'acestream_id': channel.acestream_id, 'status': status, 'check_time': round(check_elapsed, 2)}, 'stats': {'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
-                    
-                except Exception as e:
-                    offline += 1
-                    checked += 1
-                    channel.is_online = False
-                    channel.updated_at = datetime.utcnow()
-                    
-                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': total_channels, 'channel': {'id': channel.id, 'name': channel.name, 'status': 'error', 'error': str(e)}, 'stats': {'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
+                
+                # Commit after each batch
+                db.commit()
+                
+                yield f"data: {json.dumps({'type': 'batch_complete', 'batch': batch_num, 'message': f'Batch {batch_num} complete', 'stats': {'checked': checked, 'online': online, 'offline': offline}})}\n\n"
             
-            db.commit()
             elapsed = time.time() - start_time
             
-            yield f"data: {json.dumps({'type': 'complete', 'message': f'Check completed: {checked} checked, {online} online, {offline} offline, {skipped} skipped', 'details': {'total_channels': total_channels, 'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped, 'elapsed_seconds': round(elapsed, 2)}})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'message': f'Check completed: {checked} checked, {online} online, {offline} offline, {skipped} skipped in {round(elapsed, 2)}s', 'details': {'total_channels': total_channels, 'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped, 'elapsed_seconds': round(elapsed, 2)}})}\n\n"
             
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

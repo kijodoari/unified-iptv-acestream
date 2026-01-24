@@ -511,7 +511,7 @@ class AceProxyService:
 
     async def check_stream_availability(self, stream_id: str) -> bool:
         """
-        Alias for check_stream_available for API compatibility
+        Check if a stream is available and PROPERLY CLOSE the session
         Reads timeout dynamically from config
         """
         from app.config import get_config
@@ -522,8 +522,29 @@ class AceProxyService:
         self.timeout = config.acestream_timeout
         
         try:
-            result = await self.check_stream_available(stream_id)
-            return result
+            # Fetch stream info (this creates a session)
+            acestream_info = await self._fetch_stream_info(stream_id)
+            
+            # CRITICAL: Stop the session immediately to free the connection
+            try:
+                stop_url = f"{acestream_info.command_url}?method=stop"
+                timeout = aiohttp.ClientTimeout(total=5)
+                async with self.session.get(stop_url, timeout=timeout) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get('error'):
+                            logger.debug(f"Stop returned error: {data['error']}")
+                    logger.debug(f"Stream {stream_id} session stopped successfully")
+            except Exception as e:
+                logger.warning(f"Error stopping stream {stream_id}: {e}")
+            
+            # Small delay to ensure AceStream processes the stop
+            await asyncio.sleep(0.5)
+            
+            return True
+        except Exception as e:
+            logger.debug(f"Stream {stream_id} not available: {e}")
+            return False
         finally:
             # Restore original timeout
             self.timeout = original_timeout
