@@ -29,6 +29,7 @@ from app.api import dashboard
 from app.api import api_endpoints
 from app.api import aceproxy
 from app.api import logs
+from app.api import users
 from app.models import User, ScraperURL, EPGSource, Setting
 from acestream_search import main as engine, get_options, __version__
 
@@ -223,6 +224,7 @@ async def favicon():
 # AceProxy routes without prefix for pyacexy compatibility  
 app.include_router(aceproxy.router, tags=["AceProxy"])
 app.include_router(logs.router, prefix="/api", tags=["Logs"])
+app.include_router(users.router, prefix="/api", tags=["Users"])
 app.include_router(api_endpoints.router, prefix="/api", tags=["API"])
 app.include_router(dashboard.router, tags=["Dashboard"])
 app.include_router(xtream.router, tags=["Xtream API"])  # Last because it catches all paths

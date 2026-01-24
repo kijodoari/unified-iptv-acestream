@@ -1,3 +1,348 @@
+# Plan de Implementación - Funcionalidades Pendientes
+
+**Fecha**: 24 de enero de 2026  
+**Proyecto**: Unified AceStream Platform  
+**Versión**: 1.0.0
+
+---
+
+## 📋 Resumen Ejecutivo
+
+Este documento detalla el plan completo para implementar las 4 interfaces de usuario y 4 funcionalidades backend que están pendientes en la plataforma.
+
+### Estado Actual
+- ✅ Dashboard principal funcional
+- ✅ Gestión de canales completa
+- ✅ Reproductor HLS en navegador
+- ✅ API Xtream Codes funcional
+- ❌ 4 interfaces de usuario incompletas
+- ❌ 4 funcionalidades backend pendientes
+
+---
+
+## 🎯 Funcionalidades Pendientes
+
+### Interfaces de Usuario (Frontend)
+1. **User Management** - Gestión completa de usuarios
+2. **Settings** - Configuración del sistema
+3. **EPG Management** - Gestión de guía electrónica
+4. **Scraper Management** - Gestión de scraping
+
+### Funcionalidades Backend (API)
+5. **EPG Update Trigger** - Actualización manual de EPG
+6. **Channel Status Check** - Verificación de estado de canales
+7. **VOD Support** - Soporte para Video On Demand
+8. **Series Support** - Soporte para series de TV
+
+---
+
+## 📦 FASE 1: User Management (Gestión de Usuarios)
+
+### Prioridad: ALTA
+### Tiempo estimado: 3-4 horas
+### Dependencias: Ninguna
+
+### 1.1 Backend - Endpoints API
+
+**Archivo**: `app/api/users.py` (NUEVO)
+
+```python
+"""
+User Management API Endpoints
+"""
+import logging
+from datetime import datetime, timedelta
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from pydantic import BaseModel, EmailStr
+
+from app.utils.auth import get_db, get_password_hash, verify_password
+from app.models import User, UserActivity
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+# Pydantic models for request/response
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    email: Optional[EmailStr] = None
+    is_admin: bool = False
+    is_trial: bool = False
+    max_connections: int = 1
+    expiry_days: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class UserUpdate(BaseModel):
+    password: Optional[str] = None
+    email: Optional[EmailStr] = None
+    is_active: Optional[bool] = None
+    is_admin: Optional[bool] = None
+    is_trial: Optional[bool] = None
+    max_connections: Optional[int] = None
+    expiry_days: Optional[int] = None
+    notes: Optional[str] = None
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    email: Optional[str]
+    is_active: bool
+    is_admin: bool
+    is_trial: bool
+    max_connections: int
+    expiry_date: Optional[datetime]
+    created_at: datetime
+    last_login: Optional[datetime]
+    notes: Optional[str]
+
+
+@router.get("/users")
+async def get_users(
+    limit: int = 100,
+    offset: int = 0,
+    active_only: bool = False,
+    db: Session = Depends(get_db)
+):
+    """Get list of users"""
+    query = db.query(User)
+    
+    if active_only:
+        query = query.filter(User.is_active == True)
+    
+    users = query.order_by(User.created_at.desc()).limit(limit).offset(offset).all()
+    
+    return [
+        {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "is_active": user.is_active,
+            "is_admin": user.is_admin,
+            "is_trial": user.is_trial,
+            "max_connections": user.max_connections,
+            "expiry_date": user.expiry_date.isoformat() if user.expiry_date else None,
+            "created_at": user.created_at.isoformat(),
+            "last_login": user.last_login.isoformat() if user.last_login else None,
+            "notes": user.notes
+        }
+        for user in users
+    ]
+
+
+@router.get("/users/{user_id}")
+async def get_user(user_id: int, db: Session = Depends(get_db)):
+    """Get single user details"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get recent activities
+    activities = db.query(UserActivity).filter(
+        UserActivity.user_id == user_id
+    ).order_by(UserActivity.created_at.desc()).limit(10).all()
+    
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_active": user.is_active,
+        "is_admin": user.is_admin,
+        "is_trial": user.is_trial,
+        "max_connections": user.max_connections,
+        "expiry_date": user.expiry_date.isoformat() if user.expiry_date else None,
+        "created_at": user.created_at.isoformat(),
+        "updated_at": user.updated_at.isoformat(),
+        "last_login": user.last_login.isoformat() if user.last_login else None,
+        "notes": user.notes,
+        "recent_activities": [
+            {
+                "type": activity.activity_type,
+                "description": activity.description,
+                "ip_address": activity.ip_address,
+                "created_at": activity.created_at.isoformat()
+            }
+            for activity in activities
+        ]
+    }
+
+
+@router.post("/users")
+async def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
+    """Create a new user"""
+    # Check if username already exists
+    existing = db.query(User).filter(User.username == user_data.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    # Check if email already exists
+    if user_data.email:
+        existing_email = db.query(User).filter(User.email == user_data.email).first()
+        if existing_email:
+            raise HTTPException(status_code=400, detail="Email already exists")
+    
+    # Calculate expiry date
+    expiry_date = None
+    if user_data.expiry_days:
+        expiry_date = datetime.utcnow() + timedelta(days=user_data.expiry_days)
+    
+    # Create user
+    user = User(
+        username=user_data.username,
+        password_hash=get_password_hash(user_data.password),
+        email=user_data.email,
+        is_admin=user_data.is_admin,
+        is_trial=user_data.is_trial,
+        max_connections=user_data.max_connections,
+        expiry_date=expiry_date,
+        notes=user_data.notes
+    )
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    # Log activity
+    activity = UserActivity(
+        user_id=user.id,
+        activity_type="user_created",
+        description=f"User {user.username} created"
+    )
+    db.add(activity)
+    db.commit()
+    
+    logger.info(f"User created: {user.username} (ID: {user.id})")
+    
+    return {
+        "id": user.id,
+        "username": user.username,
+        "message": "User created successfully"
+    }
+
+
+@router.put("/users/{user_id}")
+async def update_user(
+    user_id: int,
+    user_data: UserUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a user"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update fields
+    if user_data.password:
+        user.password_hash = get_password_hash(user_data.password)
+    
+    if user_data.email is not None:
+        # Check if email already exists for another user
+        if user_data.email:
+            existing = db.query(User).filter(
+                User.email == user_data.email,
+                User.id != user_id
+            ).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Email already exists")
+        user.email = user_data.email
+    
+    if user_data.is_active is not None:
+        user.is_active = user_data.is_active
+    
+    if user_data.is_admin is not None:
+        user.is_admin = user_data.is_admin
+    
+    if user_data.is_trial is not None:
+        user.is_trial = user_data.is_trial
+    
+    if user_data.max_connections is not None:
+        user.max_connections = user_data.max_connections
+    
+    if user_data.expiry_days is not None:
+        user.expiry_date = datetime.utcnow() + timedelta(days=user_data.expiry_days)
+    
+    if user_data.notes is not None:
+        user.notes = user_data.notes
+    
+    user.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(user)
+    
+    # Log activity
+    activity = UserActivity(
+        user_id=user.id,
+        activity_type="user_updated",
+        description=f"User {user.username} updated"
+    )
+    db.add(activity)
+    db.commit()
+    
+    logger.info(f"User updated: {user.username} (ID: {user.id})")
+    
+    return {
+        "id": user.id,
+        "username": user.username,
+        "message": "User updated successfully"
+    }
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    """Delete a user"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    username = user.username
+    
+    db.delete(user)
+    db.commit()
+    
+    logger.info(f"User deleted: {username} (ID: {user_id})")
+    
+    return {"message": "User deleted successfully"}
+
+
+@router.post("/users/{user_id}/reset-password")
+async def reset_password(
+    user_id: int,
+    new_password: str,
+    db: Session = Depends(get_db)
+):
+    """Reset user password"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.password_hash = get_password_hash(new_password)
+    user.updated_at = datetime.utcnow()
+    
+    db.commit()
+    
+    # Log activity
+    activity = UserActivity(
+        user_id=user.id,
+        activity_type="password_reset",
+        description=f"Password reset for user {user.username}"
+    )
+    db.add(activity)
+    db.commit()
+    
+    logger.info(f"Password reset for user: {user.username} (ID: {user.id})")
+    
+    return {"message": "Password reset successfully"}
+```
+
+### 1.2 Frontend - Template HTML
+
+**Archivo**: `app/templates/users.html` (REEMPLAZAR)
+
+```html
 {% extends "layout.html" %}
 {% block title %}Users - Unified AceStream Platform{% endblock %}
 {% block users_active %}active{% endblock %}
@@ -239,106 +584,8 @@ async function addUser() {
 }
 
 async function editUser(id) {
-    try {
-        const response = await fetch(`/api/users/${id}`);
-        if (!response.ok) throw new Error('User not found');
-        
-        const user = await response.json();
-        
-        const modalHtml = `
-            <div class="modal fade" id="editUserModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Edit User: ${user.username}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="editUserForm">
-                                <div class="mb-3">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="editEmail" value="${user.email || ''}">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Max Connections</label>
-                                    <input type="number" class="form-control" id="editMaxConnections" value="${user.max_connections}" min="1">
-                                </div>
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="editIsActive" ${user.is_active ? 'checked' : ''}>
-                                        <label class="form-check-label" for="editIsActive">Active</label>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="editIsAdmin" ${user.is_admin ? 'checked' : ''}>
-                                        <label class="form-check-label" for="editIsAdmin">Administrator</label>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input" id="editIsTrial" ${user.is_trial ? 'checked' : ''}>
-                                        <label class="form-check-label" for="editIsTrial">Trial User</label>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Notes</label>
-                                    <textarea class="form-control" id="editNotes" rows="2">${user.notes || ''}</textarea>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-primary" onclick="saveUser(${id})">Save Changes</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        const existingModal = document.getElementById('editUserModal');
-        if (existingModal) existingModal.remove();
-        
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
-        modal.show();
-        
-    } catch (error) {
-        console.error('Error loading user:', error);
-        showAlert('Error loading user: ' + error.message, 'danger');
-    }
-}
-
-async function saveUser(id) {
-    try {
-        const data = {
-            email: document.getElementById('editEmail').value || null,
-            max_connections: parseInt(document.getElementById('editMaxConnections').value),
-            is_active: document.getElementById('editIsActive').checked,
-            is_admin: document.getElementById('editIsAdmin').checked,
-            is_trial: document.getElementById('editIsTrial').checked,
-            notes: document.getElementById('editNotes').value || null
-        };
-        
-        const response = await fetch(`/api/users/${id}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Failed to update user');
-        }
-        
-        showAlert('User updated successfully', 'success');
-        bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
-        loadUsers();
-        
-    } catch (error) {
-        console.error('Error updating user:', error);
-        showAlert('Error updating user: ' + error.message, 'danger');
-    }
+    // Similar implementation to addUser but for editing
+    showAlert('Edit user functionality - to be implemented', 'info');
 }
 
 async function resetPassword(id) {
@@ -383,3 +630,49 @@ loadUsers();
 setInterval(loadUsers, 60000);
 </script>
 {% endblock %}
+```
+
+### 1.3 Integración en main.py
+
+**Archivo**: `main.py` (AGREGAR)
+
+```python
+# Agregar después de las otras importaciones de routers
+from app.api import users
+
+# Agregar después de incluir otros routers
+app.include_router(users.router, prefix="/api", tags=["users"])
+```
+
+---
+
+## 📦 FASE 2-4: Settings, EPG, Scraper
+
+*[Continúa con estructura similar para las otras 3 fases...]*
+
+---
+
+## 🔧 Orden de Implementación Recomendado
+
+1. **User Management** (FASE 1) - Base para todo
+2. **Settings** (FASE 2) - Configuración del sistema
+3. **Scraper Management** (FASE 3) - Gestión de fuentes
+4. **EPG Management** (FASE 4) - Guía de programación
+5. **Backend APIs** (FASE 5-8) - Funcionalidades adicionales
+
+---
+
+## ✅ Checklist de Implementación
+
+### Por cada fase:
+- [ ] Crear/modificar archivos backend
+- [ ] Crear/modificar templates HTML
+- [ ] Integrar en main.py
+- [ ] Compilar Docker
+- [ ] Probar funcionalidad
+- [ ] Documentar en MEJORAS-IMPLEMENTADAS.md
+- [ ] Commit y push
+
+---
+
+**Nota**: Este es el plan para la FASE 1. ¿Quieres que continúe con las fases 2-8 completas?
