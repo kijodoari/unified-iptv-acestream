@@ -360,7 +360,7 @@ async def check_channels(request: Request, background_tasks: BackgroundTasks, db
 
 
 async def check_channels_background(aceproxy_service, db: Session):
-    """Background task for checking channels - PARALLEL execution"""
+    """Background task for checking channels - SEQUENTIAL execution to avoid crashing AceStream"""
     try:
         start_time = time.time()
         channels = db.query(Channel).filter(Channel.is_active == True).all()
@@ -384,11 +384,8 @@ async def check_channels_background(aceproxy_service, db: Session):
         if skipped > 0:
             logger.info(f"Skipping {skipped} channels without AceStream ID")
         
-        # Check channels in parallel (batches of 5 to avoid overwhelming AceStream engine)
-        batch_size = 5
-        
-        async def check_single_channel(channel, index):
-            """Check a single channel"""
+        # Check channels SEQUENTIALLY (one at a time) to avoid crashing AceStream engine
+        for index, channel in enumerate(channels_to_check, 1):
             try:
                 logger.info(f"[{index}/{len(channels_to_check)}] Checking {channel.name}")
                 is_available = await aceproxy_service.check_stream_availability(channel.acestream_id)
@@ -399,38 +396,27 @@ async def check_channels_background(aceproxy_service, db: Session):
                 status = "ONLINE" if is_available else "OFFLINE"
                 logger.info(f"[{index}/{len(channels_to_check)}] {status}: {channel.name}")
                 
-                return is_available
+                if is_available:
+                    online += 1
+                else:
+                    offline += 1
+                checked += 1
+                
+                # Commit after each channel
+                db.commit()
+                
+                # Small delay between checks to avoid overwhelming AceStream
+                await asyncio.sleep(1.0)
+                
             except Exception as e:
                 logger.warning(f"[{index}/{len(channels_to_check)}] Error checking {channel.name}: {e}")
                 channel.is_online = False
                 channel.last_checked = datetime.utcnow()
                 channel.updated_at = datetime.utcnow()
-                return False
-        
-        # Process in batches
-        for i in range(0, len(channels_to_check), batch_size):
-            batch = channels_to_check[i:i + batch_size]
-            batch_start = i + 1
-            
-            logger.info(f"Processing batch {i//batch_size + 1}/{(len(channels_to_check) + batch_size - 1)//batch_size} ({len(batch)} channels)")
-            
-            # Check all channels in batch in parallel
-            tasks = [check_single_channel(ch, batch_start + idx) for idx, ch in enumerate(batch)]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            # Count results
-            for result in results:
-                if isinstance(result, Exception):
-                    offline += 1
-                elif result:
-                    online += 1
-                else:
-                    offline += 1
+                offline += 1
                 checked += 1
-            
-            # Commit after each batch
-            db.commit()
-            logger.info(f"Batch complete: {checked}/{len(channels_to_check)} checked ({online} online, {offline} offline)")
+                db.commit()
+                await asyncio.sleep(1.0)
         
         elapsed = time.time() - start_time
         
@@ -442,12 +428,12 @@ async def check_channels_background(aceproxy_service, db: Session):
 
 @router.get("/channels/check/stream")
 async def check_channels_stream(request: Request, db: Session = Depends(get_db)):
-    """Check channel status with real-time progress via Server-Sent Events - PARALLEL"""
+    """Check channel status with real-time progress via Server-Sent Events - SEQUENTIAL to avoid crashing AceStream"""
     from main import aceproxy_service
     
     async def event_generator():
         try:
-            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting parallel channel check...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'start', 'message': 'Starting sequential channel check...'})}\n\n"
             
             if not aceproxy_service:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'AceProxy service not initialized'})}\n\n"
@@ -475,11 +461,8 @@ async def check_channels_stream(request: Request, db: Session = Depends(get_db))
             online = 0
             offline = 0
             
-            # Check channels in parallel (batches of 5 to avoid overwhelming AceStream engine)
-            batch_size = 5
-            
-            async def check_single_channel(channel, index):
-                """Check a single channel and return result"""
+            # Check channels SEQUENTIALLY (one at a time) to avoid crashing AceStream engine
+            for index, channel in enumerate(channels_to_check, 1):
                 try:
                     check_start = time.time()
                     is_available = await aceproxy_service.check_stream_availability(channel.acestream_id)
@@ -491,58 +474,32 @@ async def check_channels_stream(request: Request, db: Session = Depends(get_db))
                     
                     status = "online" if is_available else "offline"
                     
-                    return {
-                        'success': True,
-                        'channel': channel,
-                        'status': status,
-                        'check_time': round(check_elapsed, 2),
-                        'index': index
-                    }
+                    if is_available:
+                        online += 1
+                    else:
+                        offline += 1
+                    
+                    checked += 1
+                    
+                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': len(channels_to_check), 'channel': {'id': channel.id, 'name': channel.name, 'status': status, 'check_time': round(check_elapsed, 2)}, 'stats': {'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
+                    
+                    # Commit after each channel
+                    db.commit()
+                    
+                    # Small delay between checks to avoid overwhelming AceStream
+                    await asyncio.sleep(1.0)
+                    
                 except Exception as e:
                     channel.is_online = False
                     channel.last_checked = datetime.utcnow()
                     channel.updated_at = datetime.utcnow()
-                    
-                    return {
-                        'success': False,
-                        'channel': channel,
-                        'status': 'error',
-                        'error': str(e),
-                        'index': index
-                    }
-            
-            # Process in batches
-            for batch_num, i in enumerate(range(0, len(channels_to_check), batch_size), 1):
-                batch = channels_to_check[i:i + batch_size]
-                batch_start = i + 1
-                
-                yield f"data: {json.dumps({'type': 'batch_start', 'batch': batch_num, 'size': len(batch), 'message': f'Checking batch {batch_num} ({len(batch)} channels in parallel)...'})}\n\n"
-                
-                # Check all channels in batch in parallel
-                tasks = [check_single_channel(ch, batch_start + idx) for idx, ch in enumerate(batch)]
-                results = await asyncio.gather(*tasks)
-                
-                # Process results and send updates
-                for result in results:
-                    channel = result['channel']
-                    
-                    if result['success']:
-                        if result['status'] == 'online':
-                            online += 1
-                        else:
-                            offline += 1
-                        
-                        yield f"data: {json.dumps({'type': 'progress', 'index': result['index'], 'total': len(channels_to_check), 'channel': {'id': channel.id, 'name': channel.name, 'status': result['status'], 'check_time': result['check_time']}, 'stats': {'checked': checked + 1, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
-                    else:
-                        offline += 1
-                        yield f"data: {json.dumps({'type': 'progress', 'index': result['index'], 'total': len(channels_to_check), 'channel': {'id': channel.id, 'name': channel.name, 'status': 'error', 'error': result['error']}, 'stats': {'checked': checked + 1, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
-                    
+                    offline += 1
                     checked += 1
-                
-                # Commit after each batch
-                db.commit()
-                
-                yield f"data: {json.dumps({'type': 'batch_complete', 'batch': batch_num, 'message': f'Batch {batch_num} complete', 'stats': {'checked': checked, 'online': online, 'offline': offline}})}\n\n"
+                    
+                    yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': len(channels_to_check), 'channel': {'id': channel.id, 'name': channel.name, 'status': 'error', 'error': str(e)}, 'stats': {'checked': checked, 'online': online, 'offline': offline, 'skipped': skipped}})}\n\n"
+                    
+                    db.commit()
+                    await asyncio.sleep(1.0)
             
             elapsed = time.time() - start_time
             
