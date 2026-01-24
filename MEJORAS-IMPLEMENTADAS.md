@@ -8,11 +8,111 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - Sistema de Verificación de Estado de Canales en Tiempo Real](#-24-de-enero-de-2026---sistema-de-verificación-de-estado-de-canales-en-tiempo-real)
-2. [24 de enero de 2026 - FASE 9 COMPLETADA: Control Total sobre Credenciales Admin + Corrección EPG](#-24-de-enero-de-2026---fase-9-completada-control-total-sobre-credenciales-admin--corrección-epg)
-3. [24 de enero de 2026 - FASE 8: Auditoría y Corrección Completa de Implementación de Settings](#-24-de-enero-de-2026---fase-8-auditoría-y-corrección-completa-de-implementación-de-settings)
-4. [24 de enero de 2026 - Sistema de Colores para Settings: Dinámicos, Restart y ReadOnly](#-24-de-enero-de-2026---sistema-de-colores-para-settings-dinámicos-restart-y-readonly)
-5. [24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs](#-24-de-enero-de-2026---settings-dinámicos-completos-y-gestión-profesional-de-urls)
+1. [24 de enero de 2026 - Corrección: Canales Nuevos con is_online=NULL en lugar de False](#-24-de-enero-de-2026---corrección-canales-nuevos-con-is_onlinenull-en-lugar-de-false)
+2. [24 de enero de 2026 - Sistema de Verificación de Estado de Canales en Tiempo Real](#-24-de-enero-de-2026---sistema-de-verificación-de-estado-de-canales-en-tiempo-real)
+3. [24 de enero de 2026 - FASE 9 COMPLETADA: Control Total sobre Credenciales Admin + Corrección EPG](#-24-de-enero-de-2026---fase-9-completada-control-total-sobre-credenciales-admin--corrección-epg)
+4. [24 de enero de 2026 - FASE 8: Auditoría y Corrección Completa de Implementación de Settings](#-24-de-enero-de-2026---fase-8-auditoría-y-corrección-completa-de-implementación-de-settings)
+5. [24 de enero de 2026 - Sistema de Colores para Settings: Dinámicos, Restart y ReadOnly](#-24-de-enero-de-2026---sistema-de-colores-para-settings-dinámicos-restart-y-readonly)
+6. [24 de enero de 2026 - Settings Dinámicos Completos y Gestión Profesional de URLs](#-24-de-enero-de-2026---settings-dinámicos-completos-y-gestión-profesional-de-urls)
+
+---
+
+## 📅 24 de enero de 2026 - Corrección: Canales Nuevos con is_online=NULL en lugar de False
+
+### 🎯 Problema/Necesidad
+
+**Problema detectado**: Al revisar la base de datos, se descubrió que todos los canales tenían `is_online = 0` (False) en lugar de `NULL`, lo que causaba confusión semántica:
+
+- `is_online = False` debería significar "verificado y offline" (rojo)
+- `is_online = NULL` debería significar "no verificado aún" (gris)
+- Pero el scraper creaba canales con `False`, no con `NULL`
+
+**Impacto**: Los canales nuevos aparecían como "Unknown" (gris) cuando semánticamente deberían ser "Unknown" porque nunca se verificaron, no porque se verificaron y fallaron.
+
+### ✅ Solución Implementada
+
+Cambio en el scraper para usar `NULL` en lugar de `False` al crear canales nuevos.
+
+#### Backend - Scraper Service
+
+**Archivo**: `app/services/scraper_service.py`
+
+**Cambio**:
+```python
+# Antes
+is_online=False,  # Will be checked later
+
+# Después
+is_online=None,  # Unknown until checked
+```
+
+#### Base de Datos - Migración Manual
+
+Actualización de canales existentes que nunca fueron verificados:
+```sql
+UPDATE channels SET is_online = NULL WHERE last_checked IS NULL
+```
+
+**Resultado**: 153 canales actualizados de `is_online=0` a `is_online=NULL`
+
+### 🔧 Semántica Correcta
+
+Ahora los estados tienen significado claro:
+
+| Valor | Significado | Color | Cuándo |
+|-------|-------------|-------|--------|
+| `NULL` | No verificado aún | Gris (Unknown) | Canal recién creado |
+| `True` | Verificado y disponible | Verde (Online) | Después de verificación exitosa |
+| `False` | Verificado y no disponible | Rojo (Offline) | Después de verificación fallida |
+
+### 📝 Archivos Modificados
+
+- `app/services/scraper_service.py` - Cambiado `is_online=False` a `is_online=None`
+
+### 🧪 Pruebas Realizadas
+
+✅ **Verificación en base de datos**:
+```bash
+# Antes de la corrección
+is_online=0 (False) para todos los canales
+
+# Después de la corrección
+is_online=None para canales no verificados
+```
+
+✅ **Comportamiento esperado**:
+- Canales nuevos: `is_online=NULL` → "Unknown" (gris)
+- Después de verificar online: `is_online=True` → "Online" (verde)
+- Después de verificar offline: `is_online=False` → "Offline" (rojo)
+
+### 📦 Despliegue
+
+```bash
+# 1. Actualizar base de datos
+docker exec unified-iptv-acestream-unified-acestream-1 python -c "..."
+# Updated 153 channels to is_online=NULL
+
+# 2. Compilar y desplegar
+docker-compose down
+docker-compose build
+docker-compose up -d
+
+# 3. Verificación
+curl http://localhost:6880/health
+```
+
+### 🔮 Beneficios
+
+1. **Semántica clara**: `NULL` = no verificado, `False` = verificado y offline
+2. **Consistencia**: Los nuevos canales del scraper usan `NULL`
+3. **Lógica correcta**: El template distingue correctamente los 3 estados
+4. **Base de datos limpia**: Canales existentes actualizados correctamente
+
+### 🔮 Notas Adicionales
+
+- Esta corrección complementa el sistema de verificación implementado anteriormente
+- Los canales que se verifiquen en el futuro tendrán `True` o `False` según disponibilidad
+- El campo `last_checked` permite distinguir entre "nunca verificado" y "verificado hace tiempo"
 
 ---
 

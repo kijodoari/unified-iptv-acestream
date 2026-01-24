@@ -184,7 +184,7 @@ class M3UParser:
                             epg_id=data.get("epg_channel_id", ""),
                             category_id=category_id,
                             is_active=True,
-                            is_online=False,  # Will be checked later
+                            is_online=None,  # Unknown until checked
                             created_at=datetime.now(),
                             updated_at=datetime.now()
                         )
