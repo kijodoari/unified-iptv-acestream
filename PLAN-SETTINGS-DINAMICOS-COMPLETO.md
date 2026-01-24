@@ -2,9 +2,9 @@
 
 ## 📊 Resumen Ejecutivo
 
-**Estado**: ✅ IMPLEMENTACIÓN COMPLETADA
+**Estado**: ⚠️ FASE 8 PENDIENTE (Auditoría detectó implementación incompleta)
 
-**Logros**:
+**Logros Fases 1-7**:
 - ✅ 22 settings totales (eliminados 2 obsoletos: scraper_urls, epg_sources)
 - ✅ 9 settings dinámicos (se aplican sin reiniciar)
 - ✅ 13 settings que requieren restart
@@ -12,7 +12,19 @@
 - ✅ APIs REST completas para gestión de fuentes
 - ✅ Servicios leen de tablas en lugar de settings
 
-**Resultado**: Sistema completamente funcional con configuración dinámica y gestión profesional de URLs.
+**Problema Detectado**:
+- ⚠️ Auditoría reveló que 8 de 22 settings (36.4%) NO están completamente implementados
+- ⚠️ Settings definidos en config pero NO usados en servicios
+- ⚠️ Settings dinámicos que NO recargan dinámicamente
+
+**Fase 8 - Corrección Completa**:
+- 📦 Corregir 4 settings de AceStream (engine_host, engine_port, streaming_host, streaming_port)
+- 📦 Corregir 3 settings dinámicos (server_timezone, epg_cache_file, access_token_expire_minutes)
+- 📦 Mejorar server_debug para controlar nivel de logging
+- 📦 Verificar admin_username
+- 📦 Objetivo: 100% de implementación real (22/22 settings)
+
+**Resultado Esperado**: Sistema con TODOS los settings realmente implementados y funcionando al 100%.
 
 ---
 
@@ -405,8 +417,385 @@ Documentar todos los cambios realizados.
 
 ---
 
-**Fecha de creación**: 24 de enero de 2026
-**Fecha de completación**: 24 de enero de 2026
-**Estado**: ✅ IMPLEMENTACIÓN COMPLETADA AL 100%
+## 📦 FASE 8: Auditoría y Corrección de Implementación Real
 
-**Commit**: `c7a2be2` - "Settings Dinámicos Completos y Gestión Profesional de URLs"
+### Estado: 📦 PENDIENTE
+### Prioridad: CRÍTICA
+### Fecha de inicio: 24 de enero de 2026
+
+### 🎯 Problema Detectado
+
+Tras auditoría completa del código, se detectó que **8 de 22 settings (36.4%) NO están completamente implementados**:
+
+**Resultado de Auditoría**:
+- ✅ 14 settings completamente implementados (63.6%)
+- ⚠️ 8 settings parcialmente implementados (36.4%)
+- ❌ 0 settings sin implementar
+
+### 🔍 Settings que Necesitan Corrección
+
+#### Grupo 1: Settings de AceStream (CRÍTICO)
+**Problema**: Definidos en config pero NO usados en los servicios
+
+1. **acestream_engine_host**
+   - ❌ NO usado en `app/services/aceproxy_service.py`
+   - Impacto: El servicio usa valores hardcoded en lugar del setting
+   - Solución: Modificar aceproxy_service.py para leer de config
+
+2. **acestream_engine_port**
+   - ❌ NO usado en `app/services/aceproxy_service.py`
+   - Impacto: El servicio usa valores hardcoded en lugar del setting
+   - Solución: Modificar aceproxy_service.py para leer de config
+
+3. **acestream_streaming_host**
+   - ❌ NO usado en `app/services/aiohttp_streaming_server.py`
+   - Impacto: El servidor usa valores hardcoded en lugar del setting
+   - Solución: Modificar aiohttp_streaming_server.py para leer de config
+
+4. **acestream_streaming_port**
+   - ❌ NO usado en `app/services/aiohttp_streaming_server.py`
+   - Impacto: El servidor usa valores hardcoded en lugar del setting
+   - Solución: Modificar aiohttp_streaming_server.py para leer de config
+
+#### Grupo 2: Settings Dinámicos (ALTA PRIORIDAD)
+**Problema**: Definidos pero NO recargan dinámicamente
+
+5. **server_timezone**
+   - ❌ NO recarga dinámicamente (no usa get_config())
+   - Impacto: Cambios no se aplican hasta reiniciar
+   - Solución: Usar get_config() donde se necesite la timezone
+
+6. **epg_cache_file**
+   - ❌ NO usado en `app/services/epg_service.py`
+   - Impacto: El servicio usa ruta hardcoded
+   - Solución: Modificar epg_service.py para leer de config dinámicamente
+
+7. **access_token_expire_minutes**
+   - ❌ NO recarga dinámicamente (no usa get_config())
+   - Impacto: Solo afecta tokens nuevos después de reiniciar
+   - Solución: Usar get_config() al generar tokens
+
+#### Grupo 3: Settings de Seguridad (MEDIA PRIORIDAD)
+
+8. **admin_username**
+   - ❌ NO usado en `app/utils/auth.py`
+   - Impacto: El username se lee de otra fuente
+   - Solución: Verificar si debe usarse o es readonly por diseño
+
+#### Grupo 4: Mejoras Adicionales
+
+9. **server_debug**
+   - ⚠️ Solo controla auto-reload, NO controla nivel de logging
+   - Impacto: Los logs siempre están en DEBUG independientemente del setting
+   - Solución: Hacer que controle el nivel de logging (DEBUG vs INFO)
+
+---
+
+## 📋 Plan de Corrección Detallado
+
+### 8.1. Corrección de AceStream Engine Settings
+
+**Archivo**: `app/services/aceproxy_service.py`
+
+**Problema Actual**:
+```python
+# Valores hardcoded o leídos solo al inicio
+def __init__(self, engine_host="acestream", engine_port=6878, ...):
+    self.engine_host = engine_host
+    self.engine_port = engine_port
+```
+
+**Solución**:
+```python
+# Leer de config en cada operación (restart required)
+def __init__(self, config):
+    self.config = config
+    
+def check_stream_availability(self, content_id):
+    # Usar valores de config
+    engine_host = self.config.acestream_engine_host
+    engine_port = self.config.acestream_engine_port
+    url = f"http://{engine_host}:{engine_port}/ace/getstream?id={content_id}"
+```
+
+**Archivos a modificar**:
+- `app/services/aceproxy_service.py` - Usar config.acestream_engine_host y config.acestream_engine_port
+- `main.py` - Pasar config al inicializar AceProxyService
+
+### 8.2. Corrección de AceStream Streaming Settings
+
+**Archivo**: `app/services/aiohttp_streaming_server.py`
+
+**Problema Actual**:
+```python
+# Valores hardcoded
+def __init__(self, host="0.0.0.0", port=6881, ...):
+    self.host = host
+    self.port = port
+```
+
+**Solución**:
+```python
+# Leer de config
+def __init__(self, config):
+    self.config = config
+    self.host = config.acestream_streaming_host
+    self.port = config.acestream_streaming_port
+```
+
+**Archivos a modificar**:
+- `app/services/aiohttp_streaming_server.py` - Usar config.acestream_streaming_host y config.acestream_streaming_port
+- `main.py` - Pasar config al inicializar AiohttpStreamingServer
+
+### 8.3. Corrección de server_timezone (Dinámico)
+
+**Archivos donde se usa timezone**:
+- `app/api/dashboard.py` - Mostrar en dashboard
+- Cualquier lugar que formatee fechas
+
+**Solución**:
+```python
+# En lugar de leer una vez al inicio
+from app.config import get_config
+
+def format_date():
+    config = get_config()
+    tz = config.server_timezone
+    # Usar timezone dinámicamente
+```
+
+### 8.4. Corrección de epg_cache_file (Dinámico)
+
+**Archivo**: `app/services/epg_service.py`
+
+**Problema Actual**:
+```python
+# Ruta hardcoded o leída solo al inicio
+self.cache_file = "data/epg.xml"
+```
+
+**Solución**:
+```python
+# Leer dinámicamente
+from app.config import get_config
+
+def save_cache(self):
+    config = get_config()
+    cache_file = config.epg_cache_file
+    # Guardar en la ruta configurada
+```
+
+**Métodos a modificar**:
+- `save_cache()` - Guardar EPG
+- `load_cache()` - Cargar EPG
+- Cualquier método que acceda al archivo de cache
+
+### 8.5. Corrección de access_token_expire_minutes (Dinámico)
+
+**Archivo**: `app/utils/auth.py`
+
+**Problema Actual**:
+```python
+# Valor leído solo al inicio o hardcoded
+ACCESS_TOKEN_EXPIRE_MINUTES = 43200
+```
+
+**Solución**:
+```python
+# Leer dinámicamente al generar tokens
+from app.config import get_config
+
+def create_access_token(data: dict):
+    config = get_config()
+    expire_minutes = config.access_token_expire_minutes
+    expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
+    # Generar token con expiración dinámica
+```
+
+### 8.6. Corrección de server_debug (Mejorar)
+
+**Archivo**: `main.py`
+
+**Problema Actual**:
+```python
+# Nivel de logging hardcoded
+logging.basicConfig(
+    level=logging.DEBUG,  # Siempre DEBUG
+    ...
+)
+
+# Solo controla reload
+uvicorn.run(
+    reload=config.server_debug,  # Solo esto
+    log_level="info",  # Hardcoded
+)
+```
+
+**Solución**:
+```python
+# Controlar nivel de logging según debug
+logging.basicConfig(
+    level=logging.DEBUG if config.server_debug else logging.INFO,
+    ...
+)
+
+# Controlar reload Y log_level
+uvicorn.run(
+    reload=config.server_debug,
+    log_level="debug" if config.server_debug else "info",
+)
+```
+
+### 8.7. Verificación de admin_username
+
+**Archivo**: `app/utils/auth.py` y `app/api/dashboard.py`
+
+**Acción**: Verificar si admin_username debe usarse o es readonly por diseño.
+
+Si debe usarse:
+```python
+# Leer de config en lugar de hardcoded
+from app.config import get_config
+
+def verify_admin_credentials(credentials):
+    config = get_config()
+    admin_username = config.admin_username
+    # Verificar contra el username configurado
+```
+
+---
+
+## 🧪 Plan de Pruebas
+
+### Pruebas por Setting
+
+Para cada setting corregido, verificar:
+
+1. **Settings de Restart**:
+   - Cambiar valor en base de datos
+   - Reiniciar servidor
+   - Verificar que el nuevo valor se usa
+
+2. **Settings Dinámicos**:
+   - Cambiar valor en base de datos
+   - NO reiniciar servidor
+   - Verificar que el nuevo valor se usa inmediatamente
+
+### Script de Prueba Automatizado
+
+Crear `test_settings_real_implementation.py`:
+```python
+# Para cada setting:
+# 1. Obtener valor actual
+# 2. Cambiar a valor de prueba
+# 3. Verificar que se usa el nuevo valor
+# 4. Restaurar valor original
+```
+
+---
+
+## 📦 Orden de Implementación
+
+### Fase 8.1: AceStream Settings (CRÍTICO)
+**Tiempo estimado**: 30 minutos
+
+1. Modificar `app/services/aceproxy_service.py`
+   - Usar `config.acestream_engine_host`
+   - Usar `config.acestream_engine_port`
+
+2. Modificar `app/services/aiohttp_streaming_server.py`
+   - Usar `config.acestream_streaming_host`
+   - Usar `config.acestream_streaming_port`
+
+3. Modificar `main.py`
+   - Pasar config a los servicios
+
+4. Compilar y probar
+
+### Fase 8.2: Settings Dinámicos (ALTA)
+**Tiempo estimado**: 20 minutos
+
+1. Modificar `app/services/epg_service.py`
+   - Hacer `epg_cache_file` dinámico
+
+2. Modificar lugares que usan `server_timezone`
+   - Hacer dinámico con get_config()
+
+3. Modificar `app/utils/auth.py`
+   - Hacer `access_token_expire_minutes` dinámico
+
+4. Compilar y probar
+
+### Fase 8.3: Mejoras de Debug (MEDIA)
+**Tiempo estimado**: 10 minutos
+
+1. Modificar `main.py`
+   - Hacer que `server_debug` controle nivel de logging
+
+2. Compilar y probar
+
+### Fase 8.4: Verificación de admin_username (BAJA)
+**Tiempo estimado**: 10 minutos
+
+1. Verificar uso actual
+2. Decidir si debe implementarse o es readonly por diseño
+3. Implementar si es necesario
+
+### Fase 8.5: Pruebas Completas
+**Tiempo estimado**: 20 minutos
+
+1. Ejecutar script de auditoría
+2. Verificar que todos los settings están al 100%
+3. Pruebas manuales de cada setting
+
+### Fase 8.6: Documentación
+**Tiempo estimado**: 15 minutos
+
+1. Actualizar `MEJORAS-IMPLEMENTADAS.md`
+2. Actualizar `SETTINGS-DINAMICOS.md`
+3. Commit y push
+
+---
+
+## ✅ Criterios de Éxito
+
+La Fase 8 se considerará completa cuando:
+
+1. ✅ Script de auditoría muestre 100% de implementación (22/22 settings)
+2. ✅ Todos los settings de AceStream se usen correctamente
+3. ✅ Todos los settings dinámicos recarguen sin reiniciar
+4. ✅ server_debug controle el nivel de logging
+5. ✅ Pruebas automatizadas pasen al 100%
+6. ✅ Documentación actualizada
+7. ✅ Código compilado, desplegado y funcionando
+8. ✅ Commit y push realizados
+
+---
+
+## 📊 Impacto Esperado
+
+**Antes de Fase 8**:
+- 63.6% de settings completamente implementados
+- 8 settings parcialmente funcionales
+- Configuración inconsistente
+
+**Después de Fase 8**:
+- 100% de settings completamente implementados
+- 0 settings parcialmente funcionales
+- Configuración totalmente funcional y consistente
+
+---
+
+**Fecha de creación del plan**: 24 de enero de 2026
+**Tiempo total estimado**: 105 minutos (~1.75 horas)
+**Estado**: 📦 PENDIENTE - Listo para implementar
+
+---
+
+**Fecha de creación**: 24 de enero de 2026
+**Fecha de completación Fases 1-7**: 24 de enero de 2026
+**Estado General**: ⚠️ FASE 8 PENDIENTE (Corrección de Implementación Real)
+
+**Commits**:
+- `c7a2be2` - "Settings Dinámicos Completos y Gestión Profesional de URLs" (Fases 1-7)
+- Pendiente - "Corrección completa de implementación de todos los settings" (Fase 8)
