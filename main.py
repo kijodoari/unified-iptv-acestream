@@ -110,24 +110,36 @@ async def lifespan(app: FastAPI):
             )
             logger.info(f"Admin user created: {config.admin_username}")
         
-        # Initialize scraper URLs if configured
+        # Initialize scraper URLs if configured (smart initialization)
         scraper_urls_list = config.get_scraper_urls_list()
         if scraper_urls_list:
             for url in scraper_urls_list:
                 existing = db.query(ScraperURL).filter(ScraperURL.url == url).first()
                 if not existing:
-                    scraper_url = ScraperURL(url=url, is_enabled=True)
+                    # URL no existe, crear nueva
+                    scraper_url = ScraperURL(url=url, is_enabled=True, is_deleted=False)
                     db.add(scraper_url)
+                    logger.info(f"Initialized scraper URL from .env: {url}")
+                elif existing.is_deleted:
+                    # URL existe pero fue eliminada por usuario, NO recrear
+                    logger.info(f"Skipping deleted scraper URL: {url}")
+                # Si existe y NO está eliminada, no hacer nada (BD prevalece)
             db.commit()
         
-        # Initialize EPG sources if configured
+        # Initialize EPG sources if configured (smart initialization)
         epg_sources_list = config.get_epg_sources_list()
         if epg_sources_list:
             for url in epg_sources_list:
                 existing = db.query(EPGSource).filter(EPGSource.url == url).first()
                 if not existing:
-                    epg_source = EPGSource(url=url, is_enabled=True)
+                    # URL no existe, crear nueva
+                    epg_source = EPGSource(url=url, is_enabled=True, is_deleted=False)
                     db.add(epg_source)
+                    logger.info(f"Initialized EPG source from .env: {url}")
+                elif existing.is_deleted:
+                    # URL existe pero fue eliminada por usuario, NO recrear
+                    logger.info(f"Skipping deleted EPG source: {url}")
+                # Si existe y NO está eliminada, no hacer nada (BD prevalece)
             db.commit()
         
         # Initialize default settings if empty
@@ -167,11 +179,8 @@ async def lifespan(app: FastAPI):
                 Setting(key="database_pool_size", value=str(config.database_pool_size), description="Tamaño del pool de conexiones"),
                 Setting(key="database_max_overflow", value=str(config.database_max_overflow), description="Máximo de conexiones adicionales"),
                 
-                # Admin User
-                Setting(key="admin_username", value=config.admin_username, description="Nombre de usuario del administrador"),
-                # Note: No guardamos la contraseña en settings por seguridad
-                
                 # Security
+                # Note: admin_username/password se gestionan desde User Management, no desde Settings
                 # Note: No guardamos SECRET_KEY en settings por seguridad
                 Setting(key="access_token_expire_minutes", value=str(config.access_token_expire_minutes), description="Tiempo de expiración de tokens (minutos)"),
             ]

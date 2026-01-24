@@ -27,18 +27,25 @@ class EPGSourceUpdate(BaseModel):
 
 
 @router.get("/epg/sources")
-async def list_epg_sources(db: Session = Depends(get_db)):
-    """List all EPG sources"""
-    sources = db.query(EPGSource).order_by(EPGSource.id).all()
+async def list_epg_sources(include_deleted: bool = False, db: Session = Depends(get_db)):
+    """List all EPG sources (excluding deleted by default)"""
+    query = db.query(EPGSource)
+    
+    if not include_deleted:
+        query = query.filter(EPGSource.is_deleted == False)
+    
+    sources = query.order_by(EPGSource.id).all()
     
     return [
         {
             "id": source.id,
             "url": source.url,
             "is_enabled": source.is_enabled,
+            "is_deleted": source.is_deleted,
             "last_updated": source.last_updated.isoformat() if source.last_updated else None,
             "programs_found": source.programs_found,
-            "created_at": source.created_at.isoformat()
+            "created_at": source.created_at.isoformat(),
+            "deleted_at": source.deleted_at.isoformat() if source.deleted_at else None
         }
         for source in sources
     ]
@@ -112,17 +119,22 @@ async def update_epg_source(
 
 @router.delete("/epg/sources/{source_id}")
 async def delete_epg_source(source_id: int, db: Session = Depends(get_db)):
-    """Delete an EPG source"""
+    """Delete an EPG source (soft delete)"""
     
     source = db.query(EPGSource).filter(EPGSource.id == source_id).first()
     if not source:
         raise HTTPException(status_code=404, detail="EPG source not found")
     
     url = source.url
-    db.delete(source)
+    
+    # Soft delete: marcar como eliminada en lugar de borrar
+    from datetime import datetime
+    source.is_deleted = True
+    source.is_enabled = False
+    source.deleted_at = datetime.utcnow()
     db.commit()
     
-    logger.info(f"Deleted EPG source {source_id}: {url}")
+    logger.info(f"Soft deleted EPG source {source_id}: {url}")
     
     return {
         "message": "EPG source deleted successfully"

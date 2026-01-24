@@ -165,6 +165,7 @@ class ScraperURL(Base):
     
     # Settings
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)  # Marca URLs eliminadas por usuario
     scraper_type: Mapped[str] = mapped_column(String(50), default="auto")  # auto, json, html, zeronet
     
     # Status
@@ -176,6 +177,7 @@ class ScraperURL(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)  # Fecha de eliminación
     
     # Relationships
     channels: Mapped[List["Channel"]] = relationship(back_populates="source_url")
@@ -190,6 +192,7 @@ class EPGSource(Base):
     
     # Settings
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)  # Marca URLs eliminadas por usuario
     is_gzipped: Mapped[bool] = mapped_column(Boolean, default=True)
     
     # Status
@@ -201,6 +204,7 @@ class EPGSource(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)  # Fecha de eliminación
 
 
 class EPGProgram(Base):

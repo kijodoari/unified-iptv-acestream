@@ -26,25 +26,28 @@ async def verify_admin_credentials(
     credentials: HTTPBasicCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    """Verify admin credentials for dashboard access"""
-    config = get_config()
+    """Verify admin credentials for dashboard access - authenticates against User table"""
+    from app.utils.auth import verify_password
     
-    # Check username
-    is_correct_username = secrets.compare_digest(
-        credentials.username.encode("utf8"),
-        config.admin_username.encode("utf8")
-    )
-    is_correct_password = secrets.compare_digest(
-        credentials.password.encode("utf8"),
-        config.admin_password.encode("utf8")
-    )
+    # Find admin user in database
+    admin_user = db.query(User).filter(
+        User.username == credentials.username,
+        User.is_admin == True,
+        User.is_active == True
+    ).first()
     
-    if not (is_correct_username and is_correct_password):
+    # Verify user exists and password is correct
+    if not admin_user or not verify_password(credentials.password, admin_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Basic"},
         )
+    
+    # Update last login
+    from datetime import datetime
+    admin_user.last_login = datetime.utcnow()
+    db.commit()
     
     return credentials.username
 

@@ -411,7 +411,10 @@ class EPGService:
         """Update EPG from all sources"""
         logger.info("Updating EPG from all sources")
         
-        sources = self.db.query(EPGSource).filter(EPGSource.is_enabled == True).all()
+        sources = self.db.query(EPGSource).filter(
+            EPGSource.is_enabled == True,
+            EPGSource.is_deleted == False
+        ).all()
         
         total_programs = 0
         for source in sources:
@@ -433,8 +436,11 @@ class EPGService:
                 await asyncio.sleep(interval)
                 logger.info("Auto EPG update triggered")
                 
-                # Get EPG sources from database table
-                epg_sources = self.db.query(EPGSource).filter(EPGSource.is_enabled == True).all()
+                # Get EPG sources from database table (excluding deleted)
+                epg_sources = self.db.query(EPGSource).filter(
+                    EPGSource.is_enabled == True,
+                    EPGSource.is_deleted == False
+                ).all()
                 
                 if epg_sources:
                     logger.info(f"Found {len(epg_sources)} enabled EPG sources")

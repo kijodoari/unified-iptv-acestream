@@ -246,8 +246,11 @@ class ImprovedScraperService:
         results = {}
         
         try:
-            # Get all enabled scraper URLs
-            scraper_urls = db.query(ScraperURL).filter(ScraperURL.is_enabled == True).all()
+            # Get all enabled scraper URLs (excluding deleted)
+            scraper_urls = db.query(ScraperURL).filter(
+                ScraperURL.is_enabled == True,
+                ScraperURL.is_deleted == False
+            ).all()
             
             if not scraper_urls:
                 logger.warning("No enabled scraper URLs found")

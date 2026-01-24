@@ -27,18 +27,25 @@ class ScraperURLUpdate(BaseModel):
 
 
 @router.get("/scraper/sources")
-async def list_scraper_sources(db: Session = Depends(get_db)):
-    """List all scraper sources"""
-    sources = db.query(ScraperURL).order_by(ScraperURL.id).all()
+async def list_scraper_sources(include_deleted: bool = False, db: Session = Depends(get_db)):
+    """List all scraper sources (excluding deleted by default)"""
+    query = db.query(ScraperURL)
+    
+    if not include_deleted:
+        query = query.filter(ScraperURL.is_deleted == False)
+    
+    sources = query.order_by(ScraperURL.id).all()
     
     return [
         {
             "id": source.id,
             "url": source.url,
             "is_enabled": source.is_enabled,
+            "is_deleted": source.is_deleted,
             "last_scraped": source.last_scraped.isoformat() if source.last_scraped else None,
             "channels_found": source.channels_found,
-            "created_at": source.created_at.isoformat()
+            "created_at": source.created_at.isoformat(),
+            "deleted_at": source.deleted_at.isoformat() if source.deleted_at else None
         }
         for source in sources
     ]
@@ -112,17 +119,22 @@ async def update_scraper_source(
 
 @router.delete("/scraper/sources/{source_id}")
 async def delete_scraper_source(source_id: int, db: Session = Depends(get_db)):
-    """Delete a scraper source"""
+    """Delete a scraper source (soft delete)"""
     
     source = db.query(ScraperURL).filter(ScraperURL.id == source_id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Scraper source not found")
     
     url = source.url
-    db.delete(source)
+    
+    # Soft delete: marcar como eliminada en lugar de borrar
+    from datetime import datetime
+    source.is_deleted = True
+    source.is_enabled = False
+    source.deleted_at = datetime.utcnow()
     db.commit()
     
-    logger.info(f"Deleted scraper source {source_id}: {url}")
+    logger.info(f"Soft deleted scraper source {source_id}: {url}")
     
     return {
         "message": "Scraper source deleted successfully"
