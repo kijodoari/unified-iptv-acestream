@@ -562,12 +562,14 @@ class EPGService:
         """
         import tempfile
         from zoneinfo import ZoneInfo
+        from app.config import get_config
         
-        # Get server timezone from config
+        # Get server timezone from config dynamically
+        config = get_config()
         try:
-            server_tz = ZoneInfo(self.config.server_timezone)
+            server_tz = ZoneInfo(config.server_timezone)
         except Exception as e:
-            logger.warning(f"Invalid timezone '{self.config.server_timezone}', using UTC: {e}")
+            logger.warning(f"Invalid timezone '{config.server_timezone}', using UTC: {e}")
             server_tz = timezone.utc
         
         # Generate date format with timezone

@@ -50,9 +50,15 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 # Ensure logs directory exists
 (BASE_DIR / "logs").mkdir(exist_ok=True)
 
+# Get config to determine log level
+from app.config import get_config
+config = get_config()
+
 # Configure logging with force=True to override any existing config
+# Use DEBUG level if server_debug is enabled, otherwise INFO
+log_level = logging.DEBUG if config.server_debug else logging.INFO
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
@@ -429,11 +435,13 @@ if __name__ == "__main__":
     log_config["loggers"]["uvicorn.access"]["handlers"].append("file")
     
     # Run unified server on single port
+    # Use debug log level if server_debug is enabled
+    uvicorn_log_level = "debug" if config.server_debug else "info"
     uvicorn.run(
         "main:app",
         host=config.server_host,
         port=config.server_port,
         reload=config.server_debug,
-        log_level="info",
+        log_level=uvicorn_log_level,
         log_config=log_config
     )
