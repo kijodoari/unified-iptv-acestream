@@ -6,6 +6,30 @@
 
 A unified IPTV platform that combines the best of acestream-scraper, pyacexy, and xtream_api into a complete solution for streaming AceStream content via IPTV clients.
 
+## 📚 Documentación del Proyecto
+
+### Guías de Usuario
+- **[INSTALACION-COMPLETA.md](./INSTALACION-COMPLETA.md)** - Guía completa de instalación, compilación y despliegue con Docker
+- **[ACCESO.md](./ACCESO.md)** - Guía de acceso, configuración de clientes IPTV y reproducción de streams
+- **[EJEMPLOS-USO.md](./EJEMPLOS-USO.md)** - Ejemplos prácticos paso a paso para casos de uso comunes
+
+### Documentación Técnica
+- **[API-REFERENCE.md](./API-REFERENCE.md)** - Referencia completa de todas las APIs disponibles (40+ endpoints)
+- **[MEJORAS-IMPLEMENTADAS.md](./MEJORAS-IMPLEMENTADAS.md)** - Registro completo de todos los cambios, mejoras y correcciones del proyecto
+
+### Información General
+- **[README.md](./README.md)** - Este documento: descripción general y características
+
+### ⚠️ Nota Importante sobre Reproducción
+Los navegadores web **NO pueden reproducir streams MPEG-TS en vivo directamente** (limitación de HTML5 Video). Los streams funcionan perfectamente en:
+- **VLC Media Player** (recomendado para pruebas rápidas)
+- **Clientes IPTV**: IPTV Smarters, TiviMate, Perfect Player, GSE Smart IPTV
+- **Kodi** con addon PVR IPTV Simple Client
+
+Ver [ACCESO.md](./ACCESO.md) y [EJEMPLOS-USO.md](./EJEMPLOS-USO.md) para instrucciones detalladas.
+
+---
+
 ## 🚀 Features
 
 ### Core Features

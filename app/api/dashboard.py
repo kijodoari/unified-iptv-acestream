@@ -75,12 +75,16 @@ async def dashboard(
 @router.get("/channels", response_class=HTMLResponse)
 async def channels(
     request: Request,
+    credentials: HTTPBasicCredentials = Depends(security),
     username: str = Depends(verify_admin_credentials)
 ):
     """Channels page - requires authentication"""
+    config = get_config()
     return templates.TemplateResponse("channels.html", {
         "request": request,
-        "username": username
+        "username": username,
+        "admin_username": credentials.username,
+        "admin_password": credentials.password
     })
 
 

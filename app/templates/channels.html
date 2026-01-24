@@ -126,22 +126,348 @@ function filterChannels() {
     });
 }
 
-function playChannel(id) {
-    showAlert('Play channel functionality coming soon', 'info');
+async function playChannel(id) {
+    try {
+        // Get channel details
+        const response = await fetch(`/api/channels/${id}`);
+        if (!response.ok) {
+            throw new Error('Channel not found');
+        }
+        
+        const channel = await response.json();
+        
+        // Build stream URL using admin credentials from backend
+        const username = '{{ admin_username }}';
+        const password = '{{ admin_password }}';
+        const streamUrl = `/live/${username}/${password}/${id}.ts`;
+        
+        // Create modal with video player
+        const modalHtml = `
+            <div class="modal fade" id="playerModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                ${channel.logo_url ? `<img src="${channel.logo_url}" style="height: 30px; margin-right: 10px;">` : ''}
+                                ${channel.name}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Reproducción de Streams AceStream:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Los navegadores no pueden reproducir streams MPEG-TS directamente</li>
+                                    <li>Usa VLC, IPTV Smarters, Perfect Player o TiviMate para reproducir</li>
+                                    <li>Copia la URL del stream y ábrela en tu reproductor favorito</li>
+                                </ul>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6>Información del Canal</h6>
+                                    <p><strong>Nombre:</strong> ${channel.name}</p>
+                                    <p><strong>Categoría:</strong> ${channel.category || 'N/A'}</p>
+                                    <p><strong>AceStream ID:</strong> <code>${channel.acestream_id || 'N/A'}</code></p>
+                                    <hr>
+                                    <h6>URL del Stream</h6>
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" id="streamUrlInput" value="${window.location.origin}${streamUrl}" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="copyStreamUrl()">
+                                            <i class="bi bi-clipboard"></i> Copiar
+                                        </button>
+                                    </div>
+                                    <hr>
+                                    <h6>Cómo Reproducir</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="text-muted small">VLC Media Player</h6>
+                                            <ol class="small">
+                                                <li>Abre VLC</li>
+                                                <li>Media → Abrir ubicación de red</li>
+                                                <li>Pega la URL del stream</li>
+                                                <li>Reproducir</li>
+                                            </ol>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="text-muted small">IPTV Smarters / Perfect Player</h6>
+                                            <ol class="small">
+                                                <li>Configura Xtream Codes API</li>
+                                                <li>URL: http://localhost:6880</li>
+                                                <li>Usuario: ${username}</li>
+                                                <li>Contraseña: ${password}</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                            <a href="${streamUrl}" class="btn btn-primary" target="_blank">
+                                <i class="bi bi-box-arrow-up-right"></i> Abrir Stream
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('playerModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('playerModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error playing channel:', error);
+        showAlert('Error loading channel: ' + error.message, 'danger');
+    }
 }
 
-function editChannel(id) {
-    showAlert('Edit channel functionality coming soon', 'info');
+function copyStreamUrl() {
+    const input = document.getElementById('streamUrlInput');
+    input.select();
+    document.execCommand('copy');
+    showAlert('URL copiada al portapapeles', 'success');
 }
 
-function deleteChannel(id) {
-    if (confirm('Are you sure you want to delete this channel?')) {
-        showAlert('Delete functionality coming soon', 'info');
+async function editChannel(id) {
+    try {
+        const response = await fetch(`/api/channels/${id}`);
+        if (!response.ok) {
+            throw new Error('Channel not found');
+        }
+        
+        const channel = await response.json();
+        
+        // Create edit modal
+        const modalHtml = `
+            <div class="modal fade" id="editModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit Channel</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editChannelForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Name</label>
+                                    <input type="text" class="form-control" id="editName" value="${channel.name}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Category</label>
+                                    <input type="text" class="form-control" id="editCategory" value="${channel.category || ''}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Logo URL</label>
+                                    <input type="url" class="form-control" id="editLogoUrl" value="${channel.logo_url || ''}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">EPG ID</label>
+                                    <input type="text" class="form-control" id="editEpgId" value="${channel.epg_id || ''}">
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="editIsActive" ${channel.is_active ? 'checked' : ''}>
+                                        <label class="form-check-label" for="editIsActive">Active</label>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" onclick="saveChannel(${id})">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('editModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('editModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error loading channel:', error);
+        showAlert('Error loading channel: ' + error.message, 'danger');
+    }
+}
+
+async function saveChannel(id) {
+    try {
+        const data = {
+            name: document.getElementById('editName').value,
+            category: document.getElementById('editCategory').value,
+            logo_url: document.getElementById('editLogoUrl').value,
+            epg_id: document.getElementById('editEpgId').value,
+            is_active: document.getElementById('editIsActive').checked
+        };
+        
+        const response = await fetch(`/api/channels/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to update channel');
+        }
+        
+        showAlert('Channel updated successfully', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        loadChannels();
+        
+    } catch (error) {
+        console.error('Error saving channel:', error);
+        showAlert('Error saving channel: ' + error.message, 'danger');
+    }
+}
+
+async function deleteChannel(id) {
+    if (!confirm('Are you sure you want to delete this channel?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/channels/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to delete channel');
+        }
+        
+        showAlert('Channel deleted successfully', 'success');
+        loadChannels();
+        
+    } catch (error) {
+        console.error('Error deleting channel:', error);
+        showAlert('Error deleting channel: ' + error.message, 'danger');
     }
 }
 
 function showAddChannelModal() {
-    showAlert('Add channel functionality coming soon', 'info');
+    const modalHtml = `
+        <div class="modal fade" id="addModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Channel</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="addChannelForm">
+                            <div class="mb-3">
+                                <label class="form-label">Name *</label>
+                                <input type="text" class="form-control" id="addName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">AceStream ID</label>
+                                <input type="text" class="form-control" id="addAcestreamId" placeholder="40 character hash">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Stream URL</label>
+                                <input type="url" class="form-control" id="addStreamUrl" placeholder="http://...">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Category</label>
+                                <input type="text" class="form-control" id="addCategory">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Logo URL</label>
+                                <input type="url" class="form-control" id="addLogoUrl">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">EPG ID</label>
+                                <input type="text" class="form-control" id="addEpgId">
+                            </div>
+                            <p class="text-muted small">* At least one of AceStream ID or Stream URL is required</p>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="addChannel()">Add Channel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('addModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('addModal'));
+    modal.show();
+}
+
+async function addChannel() {
+    try {
+        const data = {
+            name: document.getElementById('addName').value,
+            acestream_id: document.getElementById('addAcestreamId').value,
+            stream_url: document.getElementById('addStreamUrl').value,
+            category: document.getElementById('addCategory').value,
+            logo_url: document.getElementById('addLogoUrl').value,
+            epg_id: document.getElementById('addEpgId').value
+        };
+        
+        if (!data.name) {
+            showAlert('Channel name is required', 'warning');
+            return;
+        }
+        
+        if (!data.acestream_id && !data.stream_url) {
+            showAlert('Either AceStream ID or Stream URL is required', 'warning');
+            return;
+        }
+        
+        const response = await fetch('/api/channels', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to add channel');
+        }
+        
+        showAlert('Channel added successfully', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+        loadChannels();
+        
+    } catch (error) {
+        console.error('Error adding channel:', error);
+        showAlert('Error adding channel: ' + error.message, 'danger');
+    }
 }
 
 // Load channels on page load

@@ -3,7 +3,8 @@ API endpoints for dashboard data
 """
 import logging
 import time
-from fastapi import APIRouter, Depends, Request
+from datetime import datetime
+from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -114,6 +115,149 @@ async def get_channels(
         }
         for channel in channels
     ]
+
+
+@router.get("/channels/{channel_id}")
+async def get_channel(
+    channel_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get single channel details"""
+    
+    channel = db.query(Channel).filter(Channel.id == channel_id).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    
+    return {
+        "id": channel.id,
+        "name": channel.name,
+        "acestream_id": channel.acestream_id,
+        "stream_url": channel.stream_url,
+        "category": channel.category.name if channel.category else None,
+        "category_id": channel.category_id,
+        "logo_url": channel.logo_url,
+        "epg_id": channel.epg_id,
+        "language": channel.language,
+        "country": channel.country,
+        "description": channel.description,
+        "is_online": channel.is_online,
+        "is_active": channel.is_active,
+        "created_at": channel.created_at.isoformat(),
+        "updated_at": channel.updated_at.isoformat()
+    }
+
+
+@router.post("/channels")
+async def create_channel(
+    channel_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Create a new channel"""
+    
+    # Check if category exists or create it
+    category = None
+    if channel_data.get('category'):
+        category = db.query(Category).filter(Category.name == channel_data['category']).first()
+        if not category:
+            category = Category(name=channel_data['category'])
+            db.add(category)
+            db.flush()
+    
+    # Create channel
+    channel = Channel(
+        name=channel_data['name'],
+        acestream_id=channel_data.get('acestream_id'),
+        stream_url=channel_data.get('stream_url'),
+        category_id=category.id if category else None,
+        logo_url=channel_data.get('logo_url'),
+        epg_id=channel_data.get('epg_id'),
+        language=channel_data.get('language'),
+        country=channel_data.get('country'),
+        description=channel_data.get('description'),
+        is_active=True
+    )
+    
+    db.add(channel)
+    db.commit()
+    db.refresh(channel)
+    
+    return {
+        "id": channel.id,
+        "name": channel.name,
+        "message": "Channel created successfully"
+    }
+
+
+@router.put("/channels/{channel_id}")
+async def update_channel(
+    channel_id: int,
+    channel_data: dict,
+    db: Session = Depends(get_db)
+):
+    """Update a channel"""
+    
+    channel = db.query(Channel).filter(Channel.id == channel_id).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    
+    # Update category if provided
+    if 'category' in channel_data and channel_data['category']:
+        category = db.query(Category).filter(Category.name == channel_data['category']).first()
+        if not category:
+            category = Category(name=channel_data['category'])
+            db.add(category)
+            db.flush()
+        channel.category_id = category.id
+    
+    # Update other fields
+    if 'name' in channel_data:
+        channel.name = channel_data['name']
+    if 'acestream_id' in channel_data:
+        channel.acestream_id = channel_data['acestream_id']
+    if 'stream_url' in channel_data:
+        channel.stream_url = channel_data['stream_url']
+    if 'logo_url' in channel_data:
+        channel.logo_url = channel_data['logo_url']
+    if 'epg_id' in channel_data:
+        channel.epg_id = channel_data['epg_id']
+    if 'is_active' in channel_data:
+        channel.is_active = channel_data['is_active']
+    if 'language' in channel_data:
+        channel.language = channel_data['language']
+    if 'country' in channel_data:
+        channel.country = channel_data['country']
+    if 'description' in channel_data:
+        channel.description = channel_data['description']
+    
+    channel.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(channel)
+    
+    return {
+        "id": channel.id,
+        "name": channel.name,
+        "message": "Channel updated successfully"
+    }
+
+
+@router.delete("/channels/{channel_id}")
+async def delete_channel(
+    channel_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a channel"""
+    
+    channel = db.query(Channel).filter(Channel.id == channel_id).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    
+    db.delete(channel)
+    db.commit()
+    
+    return {
+        "message": "Channel deleted successfully"
+    }
 
 
 @router.post("/scraper/trigger")
