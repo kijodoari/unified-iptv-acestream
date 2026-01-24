@@ -13,25 +13,63 @@
 {% endblock %}
 
 {% block content %}
+<div class="alert alert-info mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <strong><i class="bi bi-info-circle"></i> Settings Color Guide:</strong>
+            <span class="badge bg-success ms-2">Dynamic</span> Changes apply without restart
+            <span class="badge bg-warning text-dark ms-2">Restart Required</span> Need server restart
+            <span class="badge bg-secondary ms-2">Read-Only</span> Cannot be changed
+        </div>
+    </div>
+</div>
+
 <div class="row">
-    <!-- General Settings -->
+    <!-- Server Settings -->
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">General Settings</h5>
+                <h5 class="mb-0">Server Settings</h5>
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">Server Name</label>
-                    <input type="text" class="form-control setting-input" data-key="server_name" placeholder="My AceStream Server">
+                    <label class="form-label">
+                        Server Host
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="text" class="form-control border-warning setting-input" 
+                           data-key="server_host" data-type="restart" placeholder="0.0.0.0">
+                    <small class="text-muted">Host del servidor (0.0.0.0 = todas las interfaces)</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Server Description</label>
-                    <textarea class="form-control setting-input" data-key="server_description" rows="2" placeholder="Server description"></textarea>
+                    <label class="form-label">
+                        Server Port
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="number" class="form-control border-warning setting-input" 
+                           data-key="server_port" data-type="restart" placeholder="6880">
+                    <small class="text-muted">Puerto del servidor web</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Admin Email</label>
-                    <input type="email" class="form-control setting-input" data-key="admin_email" placeholder="admin@example.com">
+                    <label class="form-label">
+                        Server Timezone
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="text" class="form-control border-success setting-input" 
+                           data-key="server_timezone" data-type="dynamic" placeholder="Europe/Rome">
+                    <small class="text-muted">Zona horaria del servidor</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Debug Mode
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <select class="form-select border-warning setting-input" 
+                            data-key="server_debug" data-type="restart">
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled</option>
+                    </select>
+                    <small class="text-muted">Modo debug (true/false)</small>
                 </div>
             </div>
         </div>
@@ -45,16 +83,83 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">AceStream Engine Host</label>
-                    <input type="text" class="form-control setting-input" data-key="acestream_host" placeholder="acestream">
+                    <label class="form-label">
+                        AceStream Enabled
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <select class="form-select border-warning setting-input" 
+                            data-key="acestream_enabled" data-type="restart">
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled</option>
+                    </select>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">AceStream Engine Port</label>
-                    <input type="number" class="form-control setting-input" data-key="acestream_port" placeholder="6878">
+                    <label class="form-label">
+                        Engine Host
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="text" class="form-control border-warning setting-input" 
+                           data-key="acestream_engine_host" data-type="restart" placeholder="acestream">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Stream Timeout (seconds)</label>
-                    <input type="number" class="form-control setting-input" data-key="stream_timeout" placeholder="30">
+                    <label class="form-label">
+                        Engine Port
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="number" class="form-control border-warning setting-input" 
+                           data-key="acestream_engine_port" data-type="restart" placeholder="6878">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Connection Timeout (seconds)
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="number" class="form-control border-success setting-input" 
+                           data-key="acestream_timeout" data-type="dynamic" placeholder="15">
+                    <small class="text-muted">Timeout de conexión AceStream</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Streaming Host
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="text" class="form-control border-warning setting-input" 
+                           data-key="acestream_streaming_host" data-type="restart" placeholder="0.0.0.0">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Streaming Port
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="number" class="form-control border-warning setting-input" 
+                           data-key="acestream_streaming_port" data-type="restart" placeholder="6881">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Chunk Size (bytes)
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="number" class="form-control border-success setting-input" 
+                           data-key="acestream_chunk_size" data-type="dynamic" placeholder="8192">
+                    <small class="text-muted">Tamaño de chunk para streaming (solo nuevos streams)</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Empty Timeout (seconds)
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="number" class="form-control border-success setting-input" 
+                           data-key="acestream_empty_timeout" data-type="dynamic" placeholder="60.0" step="0.1">
+                    <small class="text-muted">Timeout sin datos (solo nuevos streams)</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        No Response Timeout (seconds)
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="number" class="form-control border-success setting-input" 
+                           data-key="acestream_no_response_timeout" data-type="dynamic" placeholder="10.0" step="0.1">
+                    <small class="text-muted">Timeout sin respuesta</small>
                 </div>
             </div>
         </div>
@@ -68,20 +173,17 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">Auto-Scrape Interval (hours)</label>
-                    <input type="number" class="form-control setting-input" data-key="scraper_interval" placeholder="24">
+                    <label class="form-label">
+                        Update Interval (seconds)
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="number" class="form-control border-success setting-input" 
+                           data-key="scraper_update_interval" data-type="dynamic" placeholder="86400">
+                    <small class="text-muted">Intervalo de actualización del scraper (86400 = 24 horas)</small>
                 </div>
-                <div class="mb-3">
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input setting-checkbox" data-key="scraper_enabled" id="scraperEnabled">
-                        <label class="form-check-label" for="scraperEnabled">Enable Auto-Scraping</label>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input setting-checkbox" data-key="scraper_remove_duplicates" id="scraperRemoveDuplicates">
-                        <label class="form-check-label" for="scraperRemoveDuplicates">Remove Duplicate Channels</label>
-                    </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Scraper URLs:</strong> Manage content sources in the "Content Sources" section below.
                 </div>
             </div>
         </div>
@@ -95,18 +197,105 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">EPG Update Interval (hours)</label>
-                    <input type="number" class="form-control setting-input" data-key="epg_interval" placeholder="12">
+                    <label class="form-label">
+                        Update Interval (seconds)
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="number" class="form-control border-success setting-input" 
+                           data-key="epg_update_interval" data-type="dynamic" placeholder="86400">
+                    <small class="text-muted">Intervalo de actualización EPG (86400 = 24 horas)</small>
                 </div>
                 <div class="mb-3">
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input setting-checkbox" data-key="epg_enabled" id="epgEnabled">
-                        <label class="form-check-label" for="epgEnabled">Enable Auto-Update EPG</label>
-                    </div>
+                    <label class="form-label">
+                        Cache File Path
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="text" class="form-control border-success setting-input" 
+                           data-key="epg_cache_file" data-type="dynamic" placeholder="data/epg.xml">
+                    <small class="text-muted">Ruta del archivo de cache EPG</small>
+                </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>EPG URLs:</strong> Manage EPG sources in the "EPG Sources" section below.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Database Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">
+                        Database URL
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="text" class="form-control border-warning setting-input" 
+                           data-key="database_url" data-type="restart" placeholder="sqlite:///data/unified-acestream.db">
+                    <small class="text-muted">URL de conexión a la base de datos</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">EPG Days to Keep</label>
-                    <input type="number" class="form-control setting-input" data-key="epg_days_keep" placeholder="7">
+                    <label class="form-label">
+                        Echo SQL Queries
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <select class="form-select border-warning setting-input" 
+                            data-key="database_echo" data-type="restart">
+                        <option value="false">Disabled</option>
+                        <option value="true">Enabled</option>
+                    </select>
+                    <small class="text-muted">Mostrar queries SQL en logs</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Pool Size
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="number" class="form-control border-warning setting-input" 
+                           data-key="database_pool_size" data-type="restart" placeholder="10">
+                    <small class="text-muted">Tamaño del pool de conexiones</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Max Overflow
+                        <span class="badge bg-warning text-dark">Restart Required</span>
+                    </label>
+                    <input type="number" class="form-control border-warning setting-input" 
+                           data-key="database_max_overflow" data-type="restart" placeholder="20">
+                    <small class="text-muted">Máximo de conexiones adicionales</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Security Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">
+                        Admin Username
+                        <span class="badge bg-secondary">Read-Only</span>
+                    </label>
+                    <input type="text" class="form-control border-secondary setting-input" 
+                           data-key="admin_username" data-type="readonly" placeholder="admin" readonly>
+                    <small class="text-muted">Nombre de usuario del administrador (no se puede cambiar)</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">
+                        Token Expiration (minutes)
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="number" class="form-control border-success setting-input" 
+                           data-key="access_token_expire_minutes" data-type="dynamic" placeholder="43200">
+                    <small class="text-muted">Tiempo de expiración de tokens (solo nuevos tokens)</small>
                 </div>
             </div>
         </div>
@@ -252,7 +441,9 @@ async function loadSettings() {
         allSettings.forEach(setting => {
             const input = document.querySelector(`[data-key="${setting.key}"]`);
             if (input) {
-                if (input.type === 'checkbox') {
+                if (input.tagName === 'SELECT') {
+                    input.value = setting.value;
+                } else if (input.type === 'checkbox') {
                     input.checked = setting.value === 'true' || setting.value === '1';
                 } else {
                     input.value = setting.value;
@@ -278,8 +469,27 @@ async function loadSettings() {
         } else {
             allSettings.forEach(setting => {
                 const row = document.createElement('tr');
+                
+                // Determine setting type based on key
+                const dynamicKeys = [
+                    'scraper_update_interval', 'epg_update_interval', 'server_timezone',
+                    'epg_cache_file', 'acestream_timeout', 'acestream_chunk_size',
+                    'acestream_empty_timeout', 'acestream_no_response_timeout',
+                    'access_token_expire_minutes'
+                ];
+                const readonlyKeys = ['admin_username'];
+                
+                let typeBadge = '';
+                if (readonlyKeys.includes(setting.key)) {
+                    typeBadge = '<span class="badge bg-secondary">Read-Only</span>';
+                } else if (dynamicKeys.includes(setting.key)) {
+                    typeBadge = '<span class="badge bg-success">Dynamic</span>';
+                } else {
+                    typeBadge = '<span class="badge bg-warning text-dark">Restart Required</span>';
+                }
+                
                 row.innerHTML = `
-                    <td><code>${setting.key}</code></td>
+                    <td><code>${setting.key}</code> ${typeBadge}</td>
                     <td>${setting.value}</td>
                     <td>${setting.description || '<span class="text-muted">N/A</span>'}</td>
                     <td>
@@ -287,9 +497,11 @@ async function loadSettings() {
                             <button class="btn btn-outline-info" onclick="editSetting('${setting.key}')" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </button>
+                            ${!readonlyKeys.includes(setting.key) ? `
                             <button class="btn btn-outline-danger" onclick="deleteSetting('${setting.key}')" title="Delete">
                                 <i class="bi bi-trash"></i>
                             </button>
+                            ` : ''}
                         </div>
                     </td>
                 `;
@@ -316,32 +528,59 @@ async function saveAllSettings() {
     try {
         const settingsToUpdate = [];
         
-        // Collect all inputs
-        document.querySelectorAll('.setting-input, .setting-checkbox').forEach(input => {
+        // Collect all inputs (exclude readonly)
+        document.querySelectorAll('.setting-input').forEach(input => {
             const key = input.dataset.key;
+            const type = input.dataset.type;
+            
+            // Skip readonly fields
+            if (type === 'readonly') return;
+            
             let value;
             
-            if (input.type === 'checkbox') {
+            if (input.tagName === 'SELECT') {
+                value = input.value;
+            } else if (input.type === 'checkbox') {
                 value = input.checked ? 'true' : 'false';
             } else {
                 value = input.value;
             }
             
             if (key && value !== '') {
-                settingsToUpdate.push({ key, value });
+                settingsToUpdate.push({ key, value, type });
             }
         });
         
-        const response = await fetch('/api/settings/bulk-update', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(settingsToUpdate)
-        });
+        // Group by type
+        const dynamicSettings = settingsToUpdate.filter(s => s.type === 'dynamic');
+        const restartSettings = settingsToUpdate.filter(s => s.type === 'restart');
         
-        if (!response.ok) throw new Error('Failed to save settings');
+        // Update all settings
+        for (const setting of settingsToUpdate) {
+            const response = await fetch(`/api/settings/${setting.key}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ value: setting.value })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to update ${setting.key}`);
+            }
+        }
         
-        const result = await response.json();
-        showAlert(result.message, 'success');
+        // Show appropriate message
+        let message = 'Settings saved successfully!';
+        if (restartSettings.length > 0 && dynamicSettings.length > 0) {
+            message += `\n\n✅ ${dynamicSettings.length} dynamic settings applied immediately.\n⚠️ ${restartSettings.length} settings require server restart to take effect.`;
+        } else if (restartSettings.length > 0) {
+            message += `\n\n⚠️ All ${restartSettings.length} settings require server restart to take effect.`;
+        } else if (dynamicSettings.length > 0) {
+            message += `\n\n✅ All ${dynamicSettings.length} settings applied immediately without restart.`;
+        }
+        
+        showAlert(message, restartSettings.length > 0 ? 'warning' : 'success');
+        
+        // Reload settings to show updated values
         loadSettings();
         
     } catch (error) {
