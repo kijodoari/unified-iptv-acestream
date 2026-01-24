@@ -245,6 +245,9 @@ class Setting(Base):
     key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
+    category: Mapped[Optional[str]] = mapped_column(String(50))
+    type: Mapped[Optional[str]] = mapped_column(String(20))
+    requires_restart: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

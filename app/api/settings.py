@@ -31,6 +31,27 @@ class SettingResponse(BaseModel):
     key: str
     value: str
     description: Optional[str]
+    category: Optional[str] = None
+    type: Optional[str] = None
+    requires_restart: bool = False
+
+
+@router.post("/settings/restart")
+async def restart_service():
+    """Restart the application service"""
+    import os
+    import signal
+    
+    try:
+        # Get the current process ID
+        pid = os.getpid()
+        
+        # Send SIGTERM to gracefully shutdown
+        os.kill(pid, signal.SIGTERM)
+        
+        return {"message": "Service restart initiated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to restart service: {str(e)}")
 
 
 @router.get("/settings")
@@ -43,7 +64,10 @@ async def get_settings(db: Session = Depends(get_db)):
             "id": setting.id,
             "key": setting.key,
             "value": setting.value,
-            "description": setting.description
+            "description": setting.description,
+            "category": getattr(setting, 'category', None),
+            "type": getattr(setting, 'type', None),
+            "requires_restart": getattr(setting, 'requires_restart', False)
         }
         for setting in settings
     ]
