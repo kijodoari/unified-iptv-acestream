@@ -384,8 +384,8 @@ async def check_channels_background(aceproxy_service, db: Session):
         if skipped > 0:
             logger.info(f"Skipping {skipped} channels without AceStream ID")
         
-        # Check channels in parallel (batches of 10 to avoid overwhelming AceStream engine)
-        batch_size = 10
+        # Check channels in parallel (batches of 5 to avoid overwhelming AceStream engine)
+        batch_size = 5
         
         async def check_single_channel(channel, index):
             """Check a single channel"""
@@ -475,8 +475,8 @@ async def check_channels_stream(request: Request, db: Session = Depends(get_db))
             online = 0
             offline = 0
             
-            # Check channels in parallel (batches of 10 to avoid overwhelming AceStream engine)
-            batch_size = 10
+            # Check channels in parallel (batches of 5 to avoid overwhelming AceStream engine)
+            batch_size = 5
             
             async def check_single_channel(channel, index):
                 """Check a single channel and return result"""
