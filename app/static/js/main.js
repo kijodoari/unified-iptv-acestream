@@ -1,2 +1,2 @@
-// Main JavaScript for Unified IPTV Platform
-console.log('Unified IPTV Platform loaded');
+// Main JavaScript for Unified AceStream Platform
+console.log('Unified AceStream Platform loaded');

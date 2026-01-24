@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 
-{% block title %}Channels - Unified IPTV Platform{% endblock %}
+{% block title %}Channels - Unified AceStream Platform{% endblock %}
 {% block channels_active %}active{% endblock %}
 {% block page_title %}Channels Management{% endblock %}
 
@@ -165,14 +165,14 @@ async function playChannel(id) {
                                 <p><strong>Categoría:</strong> ${channel.category || 'N/A'}</p>
                                 <p><strong>AceStream ID:</strong> <code>${channel.acestream_id}</code></p>
                                 <hr>
-                                <h6>URL para Reproductores Externos (VLC, IPTV Smarters)</h6>
+                                <h6>URL para Reproductores Externos (VLC, AceStream Smarters)</h6>
                                 <div class="input-group mb-2">
                                     <input type="text" class="form-control form-control-sm" id="streamUrlInput" value="${window.location.origin}${streamUrlTs}" readonly>
                                     <button class="btn btn-outline-secondary btn-sm" type="button" onclick="copyStreamUrl()">
                                         <i class="bi bi-clipboard"></i> Copiar
                                     </button>
                                 </div>
-                                <small class="text-muted">Usa esta URL en VLC, IPTV Smarters, Perfect Player, TiviMate, etc.</small>
+                                <small class="text-muted">Usa esta URL en VLC, AceStream Smarters, Perfect Player, TiviMate, etc.</small>
                             </div>
                         </div>
                         <div class="modal-footer">

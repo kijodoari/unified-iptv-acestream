@@ -1,6 +1,6 @@
 """
 Xtream Codes API Implementation
-Compatible with IPTV Smarters, Perfect Player, TiviMate, etc.
+Compatible with AceStream Smarters, Perfect Player, TiviMate, etc.
 """
 import logging
 import asyncio
@@ -26,7 +26,7 @@ router = APIRouter()
 
 class StreamHelper:
     """
-    Helper class for managing IPTV streams.
+    Helper class for managing AceStream streams.
     """
     
     @staticmethod

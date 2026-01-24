@@ -1,5 +1,5 @@
 """
-Unified IPTV AceStream Platform Configuration
+Unified AceStream Platform Configuration
 """
 import os
 import logging

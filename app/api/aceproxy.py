@@ -23,7 +23,7 @@ def deduplicate_clients(clients_info: List[dict], time_threshold: int = 10) -> L
     """
     Deduplicates client connections based on username+ip within time threshold.
     
-    This handles IPTV clients that open multiple connections (e.g., IPTV Smarters
+    This handles AceStream clients that open multiple connections (e.g., AceStream Smarters
     opens one connection for the app and another for the video player).
     
     Args:
@@ -219,7 +219,7 @@ async def get_all_streams(request: Request, db: Session = Depends(get_db)):
                     })
             
             # DEDUPLICATION: Merge duplicate connections from same user
-            # (e.g., IPTV Smarters opens 2 connections: app + video player)
+            # (e.g., AceStream Smarters opens 2 connections: app + video player)
             deduped_clients = deduplicate_clients(raw_clients)
             
             streams_list.append({

@@ -1,5 +1,5 @@
 """
-Main application entry point for Unified IPTV AceStream Platform
+Main application entry point for Unified AceStream Platform
 """
 import asyncio
 import logging
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     global aceproxy_service, aiohttp_streaming_server, scraper_service, epg_service
     
-    logger.info("Starting Unified IPTV AceStream Platform...")
+    logger.info("Starting Unified AceStream Platform...")
     
     # Initialize configuration first
     config = get_config()
@@ -191,8 +191,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Unified IPTV AceStream Platform",
-    description="Complete IPTV platform with AceStream support, Xtream Codes API, EPG, and more",
+    title="Unified AceStream Platform",
+    description="Complete AceStream platform with Xtream Codes API, EPG, and more",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -313,7 +313,7 @@ async def root():
     config = get_config()
     
     return {
-        "name": "Unified IPTV AceStream Platform",
+        "name": "Unified AceStream Platform",
         "version": "1.0.0",
         "endpoints": {
             "xtream_api": f"http://{config.server_host}:{config.server_port}/player_api.php",

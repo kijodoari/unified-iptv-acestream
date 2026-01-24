@@ -1,5 +1,5 @@
 """
-Database models for unified IPTV platform
+Database models for unified AceStream platform
 """
 from datetime import datetime
 from typing import Optional, List
@@ -92,7 +92,7 @@ class UserActivity(Base):
 
 
 class Channel(Base):
-    """Channel model - combines AceStream and IPTV channels"""
+    """Channel model - combines AceStream channels"""
     __tablename__ = "channels"
     
     id: Mapped[int] = mapped_column(primary_key=True)
