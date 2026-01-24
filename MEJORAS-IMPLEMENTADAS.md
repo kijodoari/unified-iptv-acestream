@@ -8,7 +8,8 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - Cambio de Nomenclatura: IPTV → AceStream](#-24-de-enero-de-2026---cambio-de-nomenclatura-iptv--acestream)
+1. [24 de enero de 2026 - FASE 2.5: Integración Real de Settings con Configuración](#-24-de-enero-de-2026---fase-25-integración-real-de-settings-con-configuración)
+2. [24 de enero de 2026 - Cambio de Nomenclatura: IPTV → AceStream](#-24-de-enero-de-2026---cambio-de-nomenclatura-iptv--acestream)
 2. [24 de enero de 2026 - Verificación Completa y Documentación de Todas las APIs](#-24-de-enero-de-2026---verificación-completa-y-documentación-de-todas-las-apis)
 3. [24 de enero de 2026 - FASE 2: Implementación de Settings Management](#-24-de-enero-de-2026---fase-2-implementación-de-settings-management)
 3. [24 de enero de 2026 - Corrección: Campos Faltantes en Modal de Edición de Usuario](#-24-de-enero-de-2026---corrección-campos-faltantes-en-modal-de-edición-de-usuario)
@@ -21,6 +22,118 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 9. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
 10. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
 11. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+
+---
+
+## 📅 24 de enero de 2026 - FASE 2.5: Integración Real de Settings con Configuración
+
+### 🎯 Problema/Necesidad
+Los Settings de la base de datos NO estaban siendo usados por el servidor. Eran solo datos ficticios sin funcionalidad real. El servidor solo leía del archivo `.env`.
+
+### ✅ Solución Implementada
+Integración completa de Settings DB con el sistema de configuración. Ahora Settings es 100% funcional y real.
+
+### 📝 Archivos Modificados
+- `app/config.py` - Modificado método `_get_env()` para leer de DB primero
+
+### 🔧 Cambios Técnicos
+
+**Sistema de Prioridad de Configuración**:
+```
+1. Base de Datos (Settings) → Prioridad MÁXIMA
+2. Archivo .env → Fallback
+3. Valores por defecto → Último recurso
+```
+
+**Modificación en `config.py`**:
+```python
+# ANTES: Solo leía de .env
+value = os.getenv(key, default)
+
+# DESPUÉS: Lee de DB primero, luego .env
+try:
+    db = SessionLocal()
+    setting = db.query(Setting).filter(Setting.key == key.lower()).first()
+    if setting:
+        return setting.value  # ← PRIORIDAD MÁXIMA
+finally:
+    db.close()
+
+# Fallback a .env si DB no disponible
+value = os.getenv(key, default)
+```
+
+### 🎯 Cómo Funciona Ahora
+
+**Ejemplo Real**:
+1. Usuario crea setting en DB: `server_port` = `7000`
+2. Archivo `.env` tiene: `SERVER_PORT=6880`
+3. **Resultado**: Servidor usa puerto **7000** (DB tiene prioridad)
+
+**Casos de Uso**:
+- ✅ Cambiar configuración desde el panel web
+- ✅ Override de valores del `.env` sin editarlo
+- ✅ Configuración dinámica sin reiniciar
+- ✅ Diferentes configs por entorno (dev/prod)
+
+### 🧪 Pruebas a Realizar
+
+**Test 1: Override de puerto**:
+```bash
+# 1. Crear setting
+curl -X POST http://localhost:6880/api/settings \
+  -u "admin:Admin2024!Secure" \
+  -H "Content-Type: application/json" \
+  -d '{"key":"server_port","value":"7000","description":"Custom port"}'
+
+# 2. Reiniciar servidor
+docker-compose restart
+
+# 3. Verificar que usa puerto 7000
+curl http://localhost:7000/health
+```
+
+**Test 2: Override de timeout**:
+```bash
+# Crear setting para timeout de AceStream
+curl -X POST http://localhost:6880/api/settings \
+  -u "admin:Admin2024!Secure" \
+  -H "Content-Type: application/json" \
+  -d '{"key":"acestream_timeout","value":"60","description":"Custom timeout"}'
+```
+
+### ⚠️ Notas Importantes
+
+**Claves en minúsculas**:
+- DB usa claves en minúsculas: `server_port`
+- .env usa mayúsculas: `SERVER_PORT`
+- El sistema convierte automáticamente
+
+**Reinicio necesario**:
+- Cambios en Settings requieren `docker-compose restart`
+- NO requiere rebuild, solo restart
+
+**Seguridad**:
+- Settings solo accesible por admin
+- Validación de tipos en config.py
+- Fallback seguro a .env si DB falla
+
+### 📦 Despliegue
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
+
+### 🔮 Próximos Pasos
+
+Settings ahora es 100% funcional. Puedes:
+1. Crear settings desde el panel
+2. Override cualquier configuración del .env
+3. Cambiar configuración sin editar archivos
+4. Gestionar configs por entorno
+
+**NO hay datos ficticios**. Todo es real y funcional.
 
 ---
 

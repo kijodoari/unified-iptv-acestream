@@ -43,6 +43,7 @@ class Config:
     def _get_env(key: str, required: bool = False, default: Any = None) -> Optional[str]:
         """
         Safely get environment variable with error handling
+        Priority: Database Settings > .env > default
         
         Args:
             key: Environment variable name
@@ -55,6 +56,24 @@ class Config:
         Raises:
             ConfigurationError: If required variable is missing
         """
+        # Try to get from database first
+        try:
+            from app.utils.auth import SessionLocal
+            from app.models import Setting
+            
+            db = SessionLocal()
+            try:
+                setting = db.query(Setting).filter(Setting.key == key.lower()).first()
+                if setting:
+                    logger.debug(f"Config '{key}' loaded from database: {setting.value}")
+                    return setting.value
+            finally:
+                db.close()
+        except Exception as e:
+            # Database not available yet (first startup), fall back to .env
+            logger.debug(f"Database not available for config '{key}', using .env: {e}")
+        
+        # Fall back to environment variable
         value = os.getenv(key, default)
         if required and value is None:
             raise ConfigurationError(f"Required environment variable '{key}' is not set")
