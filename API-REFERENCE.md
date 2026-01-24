@@ -988,6 +988,46 @@ http://localhost:6880/live/admin/pass/1.ts
 }
 ```
 
+### POST /api/settings/reload
+
+**Descripción**: Recargar configuración desde la base de datos sin reiniciar el servidor
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Uso**: Después de modificar settings, llama a este endpoint para aplicar los cambios dinámicamente (sin reiniciar).
+
+**Respuesta**:
+```json
+{
+  "status": "success",
+  "message": "Configuration reloaded successfully",
+  "note": "Some services may need to be restarted for changes to take full effect"
+}
+```
+
+**Settings que se aplican dinámicamente** (sin reiniciar):
+- `scraper_update_interval` - Intervalo de scraping (se aplica en <60s)
+- `epg_update_interval` - Intervalo de EPG (se aplica inmediatamente)
+- `server_timezone` - Zona horaria (se aplica al generar EPG)
+
+**Settings que requieren restart**:
+- Todos los demás (AceStream, Server, Database) requieren `docker-compose restart`
+
+**Ejemplo de uso**:
+```bash
+# 1. Cambiar intervalo de scraper a 12 horas
+curl -X PUT http://localhost:6880/api/settings/scraper_update_interval \
+  -u "admin:Admin2024!Secure" \
+  -H "Content-Type: application/json" \
+  -d '{"value":"43200"}'
+
+# 2. Recargar configuración
+curl -X POST http://localhost:6880/api/settings/reload \
+  -u "admin:Admin2024!Secure"
+
+# Resultado: Cambio aplicado en menos de 60 segundos sin reiniciar
+```
+
 ---
 
 ## API de Logs
