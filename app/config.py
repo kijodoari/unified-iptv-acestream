@@ -259,6 +259,13 @@ class Config:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = None
     
     @classmethod
+    def reload(cls):
+        """Reload configuration from database/environment"""
+        logger.info("Reloading configuration...")
+        cls.load()
+        logger.info("Configuration reloaded successfully")
+    
+    @classmethod
     def load(cls):
         """Load configuration from environment variables"""
         # Server Configuration

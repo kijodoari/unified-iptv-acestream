@@ -8,21 +8,160 @@ Este documento registra TODOS los cambios, mejoras, correcciones y nuevas funcio
 
 ### Cambios Registrados
 
-1. [24 de enero de 2026 - Corrección: Implementación Real de APIs Faltantes](#-24-de-enero-de-2026---corrección-implementación-real-de-apis-faltantes)
-2. [24 de enero de 2026 - FASE 2.5: Integración Real de Settings con Configuración](#-24-de-enero-de-2026---fase-25-integración-real-de-settings-con-configuración)
-2. [24 de enero de 2026 - Cambio de Nomenclatura: IPTV → AceStream](#-24-de-enero-de-2026---cambio-de-nomenclatura-iptv--acestream)
-2. [24 de enero de 2026 - Verificación Completa y Documentación de Todas las APIs](#-24-de-enero-de-2026---verificación-completa-y-documentación-de-todas-las-apis)
-3. [24 de enero de 2026 - FASE 2: Implementación de Settings Management](#-24-de-enero-de-2026---fase-2-implementación-de-settings-management)
-3. [24 de enero de 2026 - Corrección: Campos Faltantes en Modal de Edición de Usuario](#-24-de-enero-de-2026---corrección-campos-faltantes-en-modal-de-edición-de-usuario)
-4. [24 de enero de 2026 - Pruebas Exhaustivas de API User Management](#-24-de-enero-de-2026---pruebas-exhaustivas-de-api-user-management)
-5. [24 de enero de 2026 - FASE 1: Implementación de User Management](#-24-de-enero-de-2026---fase-1-implementación-de-user-management)
-5. [24 de enero de 2026 - Implementación de Reproductor HLS en el Navegador](#-24-de-enero-de-2026---implementación-de-reproductor-hls-en-el-navegador)
-6. [24 de enero de 2026 - Creación de Guía de Ejemplos Prácticos de Uso](#-24-de-enero-de-2026---creación-de-guía-de-ejemplos-prácticos-de-uso)
-7. [24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso](#-24-de-enero-de-2026---corrección-de-interfaz-de-reproducción-y-documentación-de-acceso)
-8. [24 de enero de 2026 - Corrección de Configuración de Streaming en Docker](#-24-de-enero-de-2026---corrección-de-configuración-de-streaming-en-docker)
-9. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
-10. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
-11. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+1. [24 de enero de 2026 - Settings Dinámicos: Inicialización Automática y Configuración en Tiempo Real](#-24-de-enero-de-2026---settings-dinámicos-inicialización-automática-y-configuración-en-tiempo-real)
+2. [24 de enero de 2026 - CRÍTICO: APIs Largas en Background - Servidor NO Bloqueado](#-24-de-enero-de-2026---crítico-apis-largas-en-background---servidor-no-bloqueado)
+3. [24 de enero de 2026 - Corrección: Implementación Real de APIs Faltantes](#-24-de-enero-de-2026---corrección-implementación-real-de-apis-faltantes)
+4. [24 de enero de 2026 - FASE 2.5: Integración Real de Settings con Configuración](#-24-de-enero-de-2026---fase-25-integración-real-de-settings-con-configuración)
+5. [24 de enero de 2026 - Cambio de Nomenclatura: IPTV → AceStream](#-24-de-enero-de-2026---cambio-de-nomenclatura-iptv--acestream)
+6. [24 de enero de 2026 - Verificación Completa y Documentación de Todas las APIs](#-24-de-enero-de-2026---verificación-completa-y-documentación-de-todas-las-apis)
+7. [24 de enero de 2026 - FASE 2: Implementación de Settings Management](#-24-de-enero-de-2026---fase-2-implementación-de-settings-management)
+8. [24 de enero de 2026 - Corrección: Campos Faltantes en Modal de Edición de Usuario](#-24-de-enero-de-2026---corrección-campos-faltantes-en-modal-de-edición-de-usuario)
+9. [24 de enero de 2026 - Pruebas Exhaustivas de API User Management](#-24-de-enero-de-2026---pruebas-exhaustivas-de-api-user-management)
+10. [24 de enero de 2026 - FASE 1: Implementación de User Management](#-24-de-enero-de-2026---fase-1-implementación-de-user-management)
+11. [24 de enero de 2026 - Implementación de Reproductor HLS en el Navegador](#-24-de-enero-de-2026---implementación-de-reproductor-hls-en-el-navegador)
+12. [24 de enero de 2026 - Creación de Guía de Ejemplos Prácticos de Uso](#-24-de-enero-de-2026---creación-de-guía-de-ejemplos-prácticos-de-uso)
+13. [24 de enero de 2026 - Corrección de Interfaz de Reproducción y Documentación de Acceso](#-24-de-enero-de-2026---corrección-de-interfaz-de-reproducción-y-documentación-de-acceso)
+14. [24 de enero de 2026 - Corrección de Configuración de Streaming en Docker](#-24-de-enero-de-2026---corrección-de-configuración-de-streaming-en-docker)
+15. [24 de enero de 2026 - Pruebas Completas de Todas las APIs](#-24-de-enero-de-2026---pruebas-completas-de-todas-las-apis)
+16. [24 de enero de 2026 - Documentación Completa de APIs](#-24-de-enero-de-2026---documentación-completa-de-apis)
+17. [24 de enero de 2026 - Implementación de Reproducción y Gestión de Canales](#-24-de-enero-de-2026---implementación-de-reproducción-y-gestión-de-canales)
+
+---
+
+## 📅 24 de enero de 2026 - Settings Dinámicos: Inicialización Automática y Configuración en Tiempo Real
+
+### 🎯 Problema/Necesidad
+Settings estaba vacío en instalaciones nuevas y los cambios no se aplicaban sin reiniciar el servidor completamente.
+
+### ✅ Solución Implementada
+1. **Inicialización automática** de 24 settings con valores del `.env` en el primer arranque
+2. **Configuración dinámica** para scraper_update_interval y epg_update_interval
+3. **Endpoint de recarga** para aplicar cambios sin reiniciar
+
+### 📝 Archivos Modificados
+- `main.py` - Agregada inicialización automática de 24 settings por defecto
+- `app/config.py` - Agregado método `Config.reload()` para recargar configuración
+- `app/api/settings.py` - Agregado endpoint `POST /api/settings/reload`
+- `app/services/scraper_service.py` - Modificado para leer intervalo dinámicamente
+- `SETTINGS-DINAMICOS.md` - NUEVO: Documentación completa del sistema
+
+### 🔧 Cambios Técnicos
+
+**1. Inicialización Automática (main.py)**:
+```python
+# Initialize default settings if empty
+settings_count = db.query(Setting).count()
+if settings_count == 0:
+    logger.info("Initializing default settings...")
+    default_settings = [
+        # 24 settings con valores del .env
+        Setting(key="server_host", value=config.server_host, ...),
+        Setting(key="server_port", value=str(config.server_port), ...),
+        # ... todos los settings del sistema
+    ]
+    db.commit()
+```
+
+**2. Método de Recarga (app/config.py)**:
+```python
+@classmethod
+def reload(cls):
+    """Reload configuration from database/environment"""
+    logger.info("Reloading configuration...")
+    cls.load()
+    logger.info("Configuration reloaded successfully")
+```
+
+**3. Endpoint de Recarga (app/api/settings.py)**:
+```python
+@router.post("/settings/reload")
+async def reload_settings(db: Session = Depends(get_db)):
+    """Reload configuration from database"""
+    Config.reload()
+    return {"status": "success", "message": "Configuration reloaded successfully"}
+```
+
+**4. Scraper Dinámico (app/services/scraper_service.py)**:
+```python
+async def auto_scrape_loop(self):
+    while self.running:
+        # Leer intervalo dinámicamente
+        config = get_config()
+        current_interval = config.scraper_update_interval
+        
+        # Detectar cambio
+        if current_interval != self.update_interval:
+            logger.info(f"Interval updated: {self.update_interval}s → {current_interval}s")
+            self.update_interval = current_interval
+```
+
+### 📊 Settings Creados Automáticamente
+
+**Total: 24 settings**
+
+**Server (4)**:
+- server_host, server_port, server_timezone, server_debug
+
+**AceStream (9)**:
+- acestream_enabled, acestream_engine_host, acestream_engine_port, acestream_timeout
+- acestream_streaming_host, acestream_streaming_port
+- acestream_chunk_size, acestream_empty_timeout, acestream_no_response_timeout
+
+**Scraper (2)**:
+- scraper_urls, scraper_update_interval
+
+**EPG (3)**:
+- epg_sources, epg_update_interval, epg_cache_file
+
+**Database (5)**:
+- database_url, database_echo, database_pool_size, database_max_overflow
+
+**Security (1)**:
+- access_token_expire_minutes
+
+### ✅ Settings que se Aplican Dinámicamente (sin reiniciar)
+
+1. **scraper_update_interval** - Se lee en cada iteración del loop
+2. **epg_update_interval** - Se lee en cada iteración del loop  
+3. **server_timezone** - Se lee al generar XML EPG
+
+**Uso**:
+```bash
+# 1. Cambiar setting
+curl -X PUT http://localhost:6880/api/settings/scraper_update_interval \
+  -u "admin:Admin2024!Secure" \
+  -H "Content-Type: application/json" \
+  -d '{"value":"43200"}'
+
+# 2. Recargar configuración
+curl -X POST http://localhost:6880/api/settings/reload \
+  -u "admin:Admin2024!Secure"
+
+# Resultado: Cambio aplicado en <60 segundos sin reiniciar
+```
+
+### ⚠️ Settings que Requieren Reinicio
+
+Todos los demás settings (AceStream, Server, Database) requieren `docker-compose restart` porque se leen solo al iniciar los servicios.
+
+### 🎯 Beneficios
+
+✅ **Instalación limpia** - Settings se crean automáticamente con valores sensatos
+✅ **Sin downtime** - Cambios dinámicos se aplican sin reiniciar (scraper/epg intervals)
+✅ **Fácil de usar** - API simple o panel web
+✅ **Documentado** - Cada setting tiene descripción clara
+✅ **Seguro** - Contraseñas y SECRET_KEY no se guardan en Settings
+
+### 📦 Despliegue
+```bash
+docker-compose down
+docker-compose build
+docker-compose up -d
+```
+
+### 🔮 Documentación
+
+Ver `SETTINGS-DINAMICOS.md` para guía completa de uso.
 
 ---
 

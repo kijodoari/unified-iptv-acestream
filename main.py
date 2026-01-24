@@ -122,6 +122,60 @@ async def lifespan(app: FastAPI):
                     db.add(epg_source)
             db.commit()
         
+        # Initialize default settings if empty
+        settings_count = db.query(Setting).count()
+        if settings_count == 0:
+            logger.info("Initializing default settings...")
+            default_settings = [
+                # Server Configuration
+                Setting(key="server_host", value=config.server_host, description="Host del servidor (0.0.0.0 = todas las interfaces)"),
+                Setting(key="server_port", value=str(config.server_port), description="Puerto del servidor web"),
+                Setting(key="server_timezone", value=config.server_timezone, description="Zona horaria del servidor"),
+                Setting(key="server_debug", value=str(config.server_debug).lower(), description="Modo debug (true/false)"),
+                
+                # AceStream Engine Configuration
+                Setting(key="acestream_enabled", value=str(config.acestream_enabled).lower(), description="Habilitar AceStream Engine (true/false)"),
+                Setting(key="acestream_engine_host", value=config.acestream_engine_host, description="Host del AceStream Engine"),
+                Setting(key="acestream_engine_port", value=str(config.acestream_engine_port), description="Puerto del AceStream Engine"),
+                Setting(key="acestream_timeout", value=str(config.acestream_timeout), description="Timeout de conexión AceStream (segundos)"),
+                
+                # AceStream Streaming Server (internal)
+                Setting(key="acestream_streaming_host", value=config.acestream_streaming_host, description="Host del servidor de streaming interno"),
+                Setting(key="acestream_streaming_port", value=str(config.acestream_streaming_port), description="Puerto del servidor de streaming interno"),
+                Setting(key="acestream_chunk_size", value=str(config.acestream_chunk_size), description="Tamaño de chunk para streaming (bytes)"),
+                Setting(key="acestream_empty_timeout", value=str(config.acestream_empty_timeout), description="Timeout sin datos (segundos)"),
+                Setting(key="acestream_no_response_timeout", value=str(config.acestream_no_response_timeout), description="Timeout sin respuesta (segundos)"),
+                
+                # Scraper Configuration
+                Setting(key="scraper_urls", value=",".join(config.get_scraper_urls_list()), description="URLs de fuentes M3U (separadas por comas)"),
+                Setting(key="scraper_update_interval", value=str(config.scraper_update_interval), description="Intervalo de actualización del scraper (segundos)"),
+                
+                # EPG Configuration
+                Setting(key="epg_sources", value=",".join(config.get_epg_sources_list()), description="URLs de fuentes EPG XMLTV (separadas por comas)"),
+                Setting(key="epg_update_interval", value=str(config.epg_update_interval), description="Intervalo de actualización EPG (segundos)"),
+                Setting(key="epg_cache_file", value=config.epg_cache_file, description="Ruta del archivo de cache EPG"),
+                
+                # Database Configuration
+                Setting(key="database_url", value=config.database_url, description="URL de conexión a la base de datos"),
+                Setting(key="database_echo", value=str(config.database_echo).lower(), description="Mostrar queries SQL en logs (true/false)"),
+                Setting(key="database_pool_size", value=str(config.database_pool_size), description="Tamaño del pool de conexiones"),
+                Setting(key="database_max_overflow", value=str(config.database_max_overflow), description="Máximo de conexiones adicionales"),
+                
+                # Admin User
+                Setting(key="admin_username", value=config.admin_username, description="Nombre de usuario del administrador"),
+                # Note: No guardamos la contraseña en settings por seguridad
+                
+                # Security
+                # Note: No guardamos SECRET_KEY en settings por seguridad
+                Setting(key="access_token_expire_minutes", value=str(config.access_token_expire_minutes), description="Tiempo de expiración de tokens (minutos)"),
+            ]
+            
+            for setting in default_settings:
+                db.add(setting)
+            
+            db.commit()
+            logger.info(f"Created {len(default_settings)} default settings")
+        
         # Initialize services
         if config.acestream_enabled:
             logger.info("Starting aiohttp streaming server (native pyacexy pattern)...")

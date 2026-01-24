@@ -307,11 +307,22 @@ class ImprovedScraperService:
         }
     
     async def auto_scrape_loop(self):
-        """Automatic scraping loop"""
-        logger.info(f"Auto-scrape loop started (interval: {self.update_interval}s)")
+        """Automatic scraping loop with dynamic interval"""
+        from app.config import get_config
+        
+        logger.info(f"Auto-scrape loop started (initial interval: {self.update_interval}s)")
         
         while self.running:
             try:
+                # Read interval dynamically from config
+                config = get_config()
+                current_interval = config.scraper_update_interval
+                
+                # Update internal interval if changed
+                if current_interval != self.update_interval:
+                    logger.info(f"Scraper interval updated: {self.update_interval}s → {current_interval}s")
+                    self.update_interval = current_interval
+                
                 # Check if it's time to scrape
                 current_time = int(time.time())
                 if current_time - self.last_update >= self.update_interval:

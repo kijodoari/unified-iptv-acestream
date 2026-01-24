@@ -133,6 +133,28 @@ async def delete_setting(key: str, db: Session = Depends(get_db)):
     return {"message": "Setting deleted successfully"}
 
 
+@router.post("/settings/reload")
+async def reload_settings(db: Session = Depends(get_db)):
+    """
+    Reload configuration from database
+    This allows settings changes to take effect without restarting the server
+    """
+    try:
+        from app.config import Config
+        
+        # Reload configuration
+        Config.reload()
+        
+        return {
+            "status": "success",
+            "message": "Configuration reloaded successfully",
+            "note": "Some services may need to be restarted for changes to take full effect"
+        }
+    except Exception as e:
+        logger.error(f"Error reloading configuration: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to reload configuration: {str(e)}")
+
+
 @router.post("/settings/bulk-update")
 async def bulk_update_settings(
     settings_data: List[dict],
