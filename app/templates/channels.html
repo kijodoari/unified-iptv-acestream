@@ -503,6 +503,15 @@ async function checkAllChannels() {
                     
                     case 'info':
                         console.log('Info:', data.message);
+                        // Si es el mensaje de reset, actualizar todos los badges a gris
+                        if (data.message.includes('Reset') && data.message.includes('Unknown')) {
+                            // Resetear todos los badges a Unknown (gris)
+                            const allBadges = document.querySelectorAll('[id^="status-"]');
+                            allBadges.forEach(badge => {
+                                badge.className = 'badge bg-secondary';
+                                badge.textContent = 'Unknown';
+                            });
+                        }
                         break;
                     
                     case 'checking':

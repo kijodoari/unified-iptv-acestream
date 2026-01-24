@@ -457,6 +457,16 @@ async def check_channels_stream(request: Request, db: Session = Depends(get_db))
             else:
                 yield f"data: {json.dumps({'type': 'info', 'message': f'Found {len(channels_to_check)} channels to check'})}\n\n"
             
+            # RESET ALL CHANNELS TO UNKNOWN (NULL) BEFORE STARTING
+            yield f"data: {json.dumps({'type': 'info', 'message': 'Resetting all channels to Unknown status...'})}\n\n"
+            
+            for channel in channels_to_check:
+                channel.is_online = None  # Set to Unknown (gray)
+                channel.updated_at = datetime.utcnow()
+            
+            db.commit()
+            yield f"data: {json.dumps({'type': 'info', 'message': f'Reset {len(channels_to_check)} channels to Unknown. Starting verification...'})}\n\n"
+            
             checked = 0
             online = 0
             offline = 0
