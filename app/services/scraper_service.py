@@ -194,7 +194,51 @@ class M3UParser:
                         if channels_added % 100 == 0:
                             logger.info(f"Parsed {channels_added} channels...")
                     else:
-                        logger.debug(f"Channel already exists: {data.get('name')}")
+                        # Update existing channel with new data from source
+                        from datetime import datetime
+                        updated = False
+                        
+                        # Update name if changed
+                        new_name = data.get("name", "Unknown")
+                        if existing.name != new_name:
+                            logger.info(f"Updating channel name: '{existing.name}' → '{new_name}'")
+                            existing.name = new_name
+                            updated = True
+                        
+                        # Update logo if changed
+                        new_logo = data.get("stream_icon", "")
+                        if existing.logo_url != new_logo:
+                            logger.info(f"Updating logo for '{existing.name}': {existing.logo_url} → {new_logo}")
+                            existing.logo_url = new_logo
+                            updated = True
+                        
+                        # Update EPG ID if changed
+                        new_epg_id = data.get("epg_channel_id", "")
+                        if existing.epg_id != new_epg_id:
+                            logger.info(f"Updating EPG ID for '{existing.name}': '{existing.epg_id}' → '{new_epg_id}'")
+                            existing.epg_id = new_epg_id
+                            updated = True
+                        
+                        # Update category if changed
+                        if existing.category_id != category_id:
+                            old_category = db.query(Category).filter(Category.id == existing.category_id).first()
+                            new_category = db.query(Category).filter(Category.id == category_id).first()
+                            logger.info(f"Updating category for '{existing.name}': '{old_category.name if old_category else 'None'}' → '{new_category.name if new_category else 'None'}'")
+                            existing.category_id = category_id
+                            updated = True
+                        
+                        # Update stream URL if changed (for non-acestream channels)
+                        if not acestream_id and existing.stream_url != data["stream_url"]:
+                            logger.info(f"Updating stream URL for '{existing.name}'")
+                            existing.stream_url = data["stream_url"]
+                            updated = True
+                        
+                        # Update timestamp if any field changed
+                        if updated:
+                            existing.updated_at = datetime.now()
+                            logger.debug(f"Channel updated: {existing.name}")
+                        else:
+                            logger.debug(f"Channel unchanged: {existing.name}")
                             
                 except Exception as e:
                     logger.error(f"Error saving channel {data.get('name')}: {e}")

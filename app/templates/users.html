@@ -102,6 +102,9 @@ async function loadUsers() {
                     <td>${lastLogin}</td>
                     <td>
                         <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="showUserUrls('${user.username}', '${user.password_hash}')" title="View URLs">
+                                <i class="bi bi-link-45deg"></i>
+                            </button>
                             <button class="btn btn-outline-info" onclick="editUser(${user.id})" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </button>
@@ -399,6 +402,154 @@ async function deleteUser(id) {
     } catch (error) {
         console.error('Error deleting user:', error);
         showAlert('Error deleting user: ' + error.message, 'danger');
+    }
+}
+
+// Show user URLs modal
+async function showUserUrls(username, passwordHash) {
+    try {
+        // Get base URL from current location or external_url setting
+        const response = await fetch('/api/settings/external_url');
+        let baseUrl = window.location.origin;
+        
+        if (response.ok) {
+            const setting = await response.json();
+            if (setting.value && setting.value.trim()) {
+                baseUrl = setting.value.trim();
+            }
+        }
+        
+        // Note: We need the actual password, not the hash
+        // For security, we'll show a note that password is needed
+        const m3uUrl = `${baseUrl}/get.php?username=${username}&password=USER_PASSWORD&type=m3u_plus&output=ts`;
+        const epgUrl = `${baseUrl}/xmltv.php?username=${username}&password=USER_PASSWORD`;
+        const xtreamUrl = baseUrl;
+        
+        const modalHtml = `
+            <div class="modal fade" id="userUrlsModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="bi bi-link-45deg"></i>
+                                URLs for User: ${username}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Note:</strong> Replace <code>USER_PASSWORD</code> with the actual user password.
+                            </div>
+                            
+                            <!-- M3U Playlist -->
+                            <div class="mb-4">
+                                <h6><i class="bi bi-file-earmark-play"></i> M3U Playlist URL</h6>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="m3uUrl" value="${m3uUrl}" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('m3uUrl')" title="Copy">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Use this URL in IPTV players that support M3U playlists</small>
+                            </div>
+                            
+                            <!-- EPG URL -->
+                            <div class="mb-4">
+                                <h6><i class="bi bi-calendar3"></i> EPG (XMLTV) URL</h6>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="epgUrl" value="${epgUrl}" readonly>
+                                    <button class="btn btn-outline-secondary" onclick="copyToClipboard('epgUrl')" title="Copy">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Electronic Program Guide in XMLTV format</small>
+                            </div>
+                            
+                            <!-- Xtream Codes API -->
+                            <div class="mb-4">
+                                <h6><i class="bi bi-server"></i> Xtream Codes API Configuration</h6>
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label"><strong>Server URL:</strong></label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" id="xtreamUrl" value="${xtreamUrl}" readonly>
+                                            <button class="btn btn-outline-secondary" onclick="copyToClipboard('xtreamUrl')" title="Copy">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label"><strong>Username:</strong></label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" id="xtreamUsername" value="${username}" readonly>
+                                            <button class="btn btn-outline-secondary" onclick="copyToClipboard('xtreamUsername')" title="Copy">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label"><strong>Password:</strong></label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control" value="USER_PASSWORD" readonly>
+                                            <button class="btn btn-outline-secondary" disabled title="Use actual password">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="text-muted">Use these credentials in IPTV Smarters, TiviMate, Perfect Player, etc.</small>
+                            </div>
+                            
+                            <!-- Compatible Players -->
+                            <div class="alert alert-success">
+                                <h6><i class="bi bi-check-circle"></i> Compatible IPTV Players:</h6>
+                                <ul class="mb-0">
+                                    <li><strong>IPTV Smarters Pro</strong> - Use Xtream Codes API</li>
+                                    <li><strong>TiviMate</strong> - Use Xtream Codes API or M3U URL</li>
+                                    <li><strong>Perfect Player</strong> - Use M3U URL + EPG URL</li>
+                                    <li><strong>VLC Media Player</strong> - Use M3U URL</li>
+                                    <li><strong>Kodi</strong> - Use M3U URL or Xtream Codes API</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const existingModal = document.getElementById('userUrlsModal');
+        if (existingModal) existingModal.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('userUrlsModal'));
+        modal.show();
+        
+    } catch (error) {
+        console.error('Error showing user URLs:', error);
+        showAlert('Error loading URLs: ' + error.message, 'danger');
+    }
+}
+
+// Copy to clipboard function
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    element.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        showAlert('Copied to clipboard!', 'success');
+    } catch (err) {
+        // Fallback for modern browsers
+        navigator.clipboard.writeText(element.value).then(() => {
+            showAlert('Copied to clipboard!', 'success');
+        }).catch(() => {
+            showAlert('Failed to copy to clipboard', 'danger');
+        });
     }
 }
 

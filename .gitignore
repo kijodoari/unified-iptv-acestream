@@ -3,3 +3,6 @@ _*
 *.db
 *.log
 /tmp
+
+# Reference projects (not part of main codebase)
+reference-HTTPAceProxy/

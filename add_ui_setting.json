@@ -1,8 +1,0 @@
-{
-  "key": "ui_channels_per_page",
-  "value": "200",
-  "description": "Number of channels to display per page in the UI",
-  "category": "UI",
-  "type": "integer",
-  "requires_restart": false
-}

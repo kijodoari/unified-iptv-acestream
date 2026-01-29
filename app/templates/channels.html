@@ -94,7 +94,7 @@ async function loadChannels() {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>
-                        ${channel.logo_url ? `<img src="${channel.logo_url}" alt="" style="width: 30px; height: 30px; object-fit: cover; margin-right: 8px;">` : ''}
+                        ${channel.logo_url ? `<img src="${channel.logo_url}" alt="${channel.name}" style="max-width: 30px; max-height: 30px; width: auto; height: auto; object-fit: contain; margin-right: 8px; vertical-align: middle;">` : ''}
                         ${channel.name}
                     </td>
                     <td>${channel.category || '<span class="text-muted">N/A</span>'}</td>

@@ -154,6 +154,66 @@ ffprobe http://localhost:6880/live/admin/Admin2024!Secure/22.ts
 
 Deberías ver información del video (H.264) y audio (AAC) si el stream está funcionando.
 
+## 🔧 Panel de Administración
+
+### Dashboard Web Completo
+
+El dashboard incluye las siguientes secciones:
+
+#### 1. **Channels** - Gestión de Canales
+- Lista completa de canales con estado (Online/Offline/Unknown)
+- Reproductor integrado con HLS
+- Verificación de estado en tiempo real
+- Búsqueda y filtros por categoría
+
+#### 2. **Users** - Gestión de Usuarios
+- Crear, editar y eliminar usuarios
+- Configurar límites de conexión
+- Gestión de fechas de expiración
+- Registro de actividades
+
+#### 3. **Settings** - Configuración del Sistema ✨
+- **4 paneles organizados**: Server, AceStream, Scraper, EPG
+- **Settings dinámicos**: Cambios sin reinicio
+- **Settings de restart**: Requieren reinicio del servicio
+- **Botón de Restart**: Reinicio desde el panel con confirmación
+- **Gestión de fuentes**: M3U y EPG URLs
+
+##### Características del Panel de Settings:
+- **Colores informativos**:
+  - 🟢 **Verde (Dynamic)**: Cambios aplicados inmediatamente
+  - 🟡 **Amarillo (Restart Required)**: Requieren reinicio
+  - ⚫ **Gris (Read-Only)**: No se pueden cambiar
+- **Botón de Restart inteligente**: Solo aparece cuando es necesario
+- **Modal de confirmación**: Advertencias claras antes del reinicio
+- **Auto-refresh**: Recarga automática después del restart
+
+#### 4. **EPG** - Guía Electrónica de Programación
+- Visualización de programación actual
+- Gestión de fuentes EPG
+- Actualización automática
+
+#### 5. **Scraper** - Gestión de Fuentes
+- Configuración de URLs de scraping
+- Ejecución manual del scraper
+- Estadísticas de canales encontrados
+
+### Cómo Usar el Botón de Restart ✨
+
+1. **Modifica settings** que requieren restart (server_host, server_port, etc.)
+2. **Guarda los cambios** → Aparece el botón "Restart Service" (amarillo)
+3. **Haz clic en "Restart Service"** → Se abre modal de confirmación
+4. **Confirma el restart** → El botón se deshabilita con spinner
+5. **Espera el reinicio** → Auto-refresh en 5 segundos
+6. **¡Listo!** → Los nuevos settings están aplicados
+
+**Settings que requieren restart**:
+- Server Host/Port
+- AceStream Engine Host/Port
+- Database URL
+- Debug Mode
+- Streaming Host/Port
+
 ## 🔧 Endpoints de la API
 
 ### API Principal

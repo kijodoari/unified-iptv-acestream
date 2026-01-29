@@ -667,12 +667,47 @@ app.include_router(users.router, prefix="/api", tags=["users"])
 ### Fecha de completación: 24 de enero de 2026
 
 ### Resumen de Implementación
-- Backend: 6 endpoints implementados (GET, POST, PUT, DELETE, bulk-update)
-- Frontend: Interfaz completa con 4 paneles organizados + tabla general
+- Backend: 7 endpoints implementados (GET, POST, PUT, DELETE, bulk-update, reload, **restart**)
+- Frontend: Interfaz completa con 4 paneles organizados + tabla general + **botón de restart**
 - Funcionalidades: Configuración de servidor, AceStream, scraper y EPG
-- Características: Bulk update, checkboxes, validación de claves únicas
+- Características: Bulk update, checkboxes, validación de claves únicas, **restart desde panel**
+- **Botón de Restart**: Modal de confirmación, feedback visual, auto-refresh
 - Documentación: Completa en MEJORAS-IMPLEMENTADAS.md
-- Commits: Pendiente
+- Commits: 
+  - `aa9d281` - "Feature: Boton de restart desde panel de settings + campos requires_restart, category, type"
+
+### Funcionalidades Implementadas
+
+#### Backend - Endpoints API
+1. **GET /api/settings** - Listar todos los settings
+2. **GET /api/settings/{key}** - Obtener setting específico
+3. **POST /api/settings** - Crear nuevo setting
+4. **PUT /api/settings/{key}** - Actualizar setting
+5. **DELETE /api/settings/{key}** - Eliminar setting
+6. **POST /api/settings/reload** - Recargar configuración
+7. **POST /api/settings/restart** - **Reiniciar servicio** ✨
+
+#### Frontend - Panel de Settings
+1. **4 Paneles organizados**: Server, AceStream, Scraper, EPG
+2. **Tabla general**: Todos los settings con búsqueda
+3. **Modales**: Agregar/editar settings
+4. **Bulk operations**: Guardar todos los settings
+5. **Botón de Restart**: **Reinicio desde panel con confirmación** ✨
+
+#### Características del Botón de Restart ✨
+- **Visibilidad inteligente**: Solo aparece cuando se guardan settings que requieren restart
+- **Modal de confirmación**: Advertencias claras sobre el proceso
+- **Feedback visual**: Spinner animado durante el restart
+- **Auto-refresh**: Recarga automática después del restart
+- **Integración completa**: Compatible con sistema de settings dinámicos
+
+### Pruebas Realizadas
+- ✅ Endpoint `/api/settings/restart` funciona: `{"message":"Service restart initiated"}`
+- ✅ Restart real confirmado: Contenedor se reinició correctamente
+- ✅ Servicio funcional después del restart: `{"status":"healthy"}`
+- ✅ Botón aparece/desaparece según configuración
+- ✅ Modal de confirmación funciona
+- ✅ Auto-refresh después del restart
 
 ---
 

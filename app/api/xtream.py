@@ -124,7 +124,20 @@ CLIENT = ClientTracker()
 
 
 def get_base_url(request: Request) -> str:
-    """Get base URL from request"""
+    """Get base URL from request, with support for external_url setting"""
+    from app.utils.auth import SessionLocal
+    from app.models import Setting
+    
+    # Check if external_url is configured in database
+    db = SessionLocal()
+    try:
+        external_url_setting = db.query(Setting).filter(Setting.key == "external_url").first()
+        if external_url_setting and external_url_setting.value and external_url_setting.value.strip():
+            # External URL is configured, use it (remove trailing slash if present)
+            return external_url_setting.value.rstrip('/')
+    finally:
+        db.close()
+    
     config = get_config()
     
     # Check for reverse proxy headers
@@ -134,7 +147,15 @@ def get_base_url(request: Request) -> str:
     if forwarded_host:
         return f"{forwarded_proto}://{forwarded_host}"
     
-    return f"http://{config.server_host}:{config.server_port}"
+    # Use the Host header from the request (includes port if non-standard)
+    host_header = request.headers.get("host")
+    if host_header:
+        return f"http://{host_header}"
+    
+    # Fallback: use request client host and server port
+    # This handles cases where Host header is not present
+    client_host = request.client.host if request.client else "localhost"
+    return f"http://{client_host}:{config.server_port}"
 
 
 @router.get("/player_api.php")

@@ -1028,6 +1028,56 @@ curl -X POST http://localhost:6880/api/settings/reload \
 # Resultado: Cambio aplicado en menos de 60 segundos sin reiniciar
 ```
 
+### POST /api/settings/restart
+
+**Descripción**: Reiniciar el servicio completo para aplicar settings que requieren restart
+
+**Autenticación**: HTTP Basic Auth (admin)
+
+**Uso**: Después de modificar settings que requieren restart (server_host, server_port, acestream_engine_host, etc.), usa este endpoint para reiniciar el servicio automáticamente.
+
+**Respuesta**:
+```json
+{
+  "message": "Service restart initiated"
+}
+```
+
+**Settings que requieren restart**:
+- `server_host` - Host del servidor
+- `server_port` - Puerto del servidor  
+- `server_debug` - Modo debug
+- `acestream_enabled` - Habilitar AceStream
+- `acestream_engine_host` - Host del motor AceStream
+- `acestream_engine_port` - Puerto del motor AceStream
+- `acestream_streaming_host` - Host de streaming
+- `acestream_streaming_port` - Puerto de streaming
+- `database_url` - URL de base de datos
+- `database_echo` - Echo SQL queries
+- `database_pool_size` - Tamaño del pool
+- `database_max_overflow` - Máximo overflow
+
+**Ejemplo de uso**:
+```bash
+# 1. Cambiar puerto del servidor
+curl -X PUT http://localhost:6880/api/settings/server_port \
+  -u "admin:Admin2024!Secure" \
+  -H "Content-Type: application/json" \
+  -d '{"value":"6881"}'
+
+# 2. Reiniciar servicio para aplicar cambio
+curl -X POST http://localhost:6880/api/settings/restart \
+  -u "admin:Admin2024!Secure"
+
+# Resultado: Servicio se reinicia automáticamente con nuevo puerto
+```
+
+**Notas importantes**:
+- El servicio estará indisponible por unos segundos durante el restart
+- Todas las conexiones activas se terminarán
+- El panel web se recargará automáticamente después del restart
+- Solo usar cuando sea necesario (settings que requieren restart)
+
 ---
 
 ## API de Logs

@@ -31,16 +31,18 @@ A unified IPTV platform that combines the best of acestream-scraper, pyacexy, an
 - **Complete EPG**: Electronic Program Guide with aggregation from multiple sources
 - **User Management**: Complete authentication and authorization system
 - **Web Dashboard**: Modern and intuitive administration interface with HTML5 HLS player
+- **Dynamic Settings**: Configuration panel with restart button for system management
 
 ### Advanced Features
 - Integrated AceStream Engine with Acexy proxy
 - ZeroNet support for decentralized sources
 - Cloudflare WARP for geo-unblocking
-- Real-time channel status monitoring
+- Real-time channel status monitoring with SSE updates
 - Configurable auto-rescraping
 - SQLAlchemy database with migrations
 - Health checking and monitoring
 - Documented REST API (OpenAPI/Swagger)
+- **Service restart from web panel** with confirmation modal
 
 ## 📋 Architecture
 

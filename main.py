@@ -34,7 +34,18 @@ from app.api import settings
 from app.api import scraper
 from app.api import epg
 from app.models import User, ScraperURL, EPGSource, Setting
-from acestream_search import main as engine, get_options, __version__
+
+# Optional import for acestream_search
+try:
+    from acestream_search import main as engine, get_options, __version__
+    ACESTREAM_SEARCH_AVAILABLE = True
+except ImportError:
+    engine = None
+    get_options = None
+    __version__ = "N/A"
+    ACESTREAM_SEARCH_AVAILABLE = False
+    import warnings
+    warnings.warn("acestream_search module not available. Search functionality will be disabled.")
 
 # Get base directory
 BASE_DIR = Path(__file__).resolve().parent
@@ -86,6 +97,28 @@ async def lifespan(app: FastAPI):
     
     # Initialize configuration first
     config = get_config()
+    
+    # Run database migrations automatically
+    logger.info("Running database migrations...")
+    try:
+        from alembic.config import Config
+        from alembic import command
+        
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("✅ Database migrations completed successfully")
+    except Exception as e:
+        logger.warning(f"Migration warning (may be first run): {e}")
+        # If migrations fail, try to stamp the database
+        try:
+            from alembic.config import Config
+            from alembic import command
+            
+            alembic_cfg = Config("alembic.ini")
+            command.stamp(alembic_cfg, "head")
+            logger.info("✅ Database stamped with current schema")
+        except Exception as stamp_error:
+            logger.warning(f"Could not stamp database: {stamp_error}")
     
     # Initialize database with config
     from app.utils.auth import init_db as initialize_database
@@ -183,6 +216,9 @@ async def lifespan(app: FastAPI):
                 # Note: admin_username/password se gestionan desde User Management, no desde Settings
                 # Note: No guardamos SECRET_KEY en settings por seguridad
                 Setting(key="access_token_expire_minutes", value=str(config.access_token_expire_minutes), description="Tiempo de expiración de tokens (minutos)"),
+                
+                # External Access
+                Setting(key="external_url", value="", description="URL externa para acceso remoto (opcional, ej: http://mi-dominio.com:6880)"),
             ]
             
             for setting in default_settings:
@@ -357,6 +393,9 @@ async def search(request: Request):
                 for line in f:
                     yield line
         else:
+            if not ACESTREAM_SEARCH_AVAILABLE:
+                raise HTTPException(status_code=503, detail="AceStream search functionality is not available. Module 'acestream_search' is not installed.")
+            
             try:
                 with open(temp_cache_file, 'w', encoding='utf-8') as f:                              
                     for page in engine(args):

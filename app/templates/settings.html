@@ -10,6 +10,9 @@
 <button class="btn btn-success" onclick="saveAllSettings()">
     <i class="bi bi-save"></i> Save All
 </button>
+<button class="btn btn-warning" onclick="restartService()" id="restartBtn">
+    <i class="bi bi-arrow-clockwise"></i> Restart Service
+</button>
 {% endblock %}
 
 {% block content %}
@@ -300,6 +303,37 @@
             </div>
         </div>
     </div>
+
+    <!-- External Access Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">External Access Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">
+                        External URL
+                        <span class="badge bg-success">Dynamic</span>
+                    </label>
+                    <input type="text" class="form-control border-success setting-input" 
+                           data-key="external_url" data-type="dynamic" placeholder="http://mi-dominio.com:6880">
+                    <small class="text-muted">URL externa para acceso remoto (opcional). Ejemplo: http://mi-dominio.com:6880 o https://iptv.midominio.com</small>
+                </div>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>¿Qué es esto?</strong><br>
+                    Si configuras una URL externa, todas las URLs generadas (M3U, EPG, Xtream Codes) usarán este dominio en lugar del host local.
+                    Esto es útil cuando accedes al servidor desde fuera de tu red local usando un dominio DNS o IP pública.
+                </div>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Importante:</strong> Deja este campo vacío si solo usas el servidor en red local.
+                    Solo configúralo si tienes un dominio o IP pública apuntando a este servidor.
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Content Sources (M3U URLs) -->
@@ -429,6 +463,16 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
 <script>
 let allSettings = [];
 
@@ -475,7 +519,7 @@ async function loadSettings() {
                     'scraper_update_interval', 'epg_update_interval', 'server_timezone',
                     'epg_cache_file', 'acestream_timeout', 'acestream_chunk_size',
                     'acestream_empty_timeout', 'acestream_no_response_timeout',
-                    'access_token_expire_minutes'
+                    'access_token_expire_minutes', 'external_url'
                 ];
                 const readonlyKeys = ['admin_username'];
                 
@@ -579,6 +623,11 @@ async function saveAllSettings() {
         }
         
         showAlert(message, restartSettings.length > 0 ? 'warning' : 'success');
+        
+        // Show restart button if there are restart-required settings
+        if (restartSettings.length > 0) {
+            document.getElementById('restartBtn').style.display = 'inline-block';
+        }
         
         // Reload settings to show updated values
         loadSettings();
@@ -766,6 +815,7 @@ async function deleteSetting(key) {
 loadSettings();
 loadScraperSources();
 loadEPGSources();
+checkRestartButtonVisibility();
 
 // Load scraper sources
 async function loadScraperSources() {
@@ -1149,6 +1199,111 @@ async function deleteSource(type, id) {
         console.error('Error deleting source:', error);
         showAlert('Error deleting source: ' + error.message, 'danger');
     }
+}
+
+// Restart service
+async function restartService() {
+    // Show confirmation modal
+    const confirmHtml = `
+        <div class="modal fade" id="restartConfirmModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-exclamation-triangle text-warning"></i>
+                            Confirm Service Restart
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Important:</strong> This will restart the entire service.
+                        </div>
+                        <p>The following will happen:</p>
+                        <ul>
+                            <li>All active connections will be terminated</li>
+                            <li>The service will be unavailable for a few seconds</li>
+                            <li>Settings requiring restart will take effect</li>
+                            <li>You will need to refresh this page after restart</li>
+                        </ul>
+                        <p><strong>Are you sure you want to continue?</strong></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" onclick="executeRestart()">
+                            <i class="bi bi-arrow-clockwise"></i> Yes, Restart Service
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const existingModal = document.getElementById('restartConfirmModal');
+    if (existingModal) existingModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', confirmHtml);
+    const modal = new bootstrap.Modal(document.getElementById('restartConfirmModal'));
+    modal.show();
+}
+
+// Execute restart
+async function executeRestart() {
+    try {
+        // Hide confirmation modal
+        bootstrap.Modal.getInstance(document.getElementById('restartConfirmModal')).hide();
+        
+        // Show restart in progress
+        showAlert('Restarting service... Please wait and refresh the page in a few seconds.', 'info');
+        
+        // Disable restart button
+        const restartBtn = document.getElementById('restartBtn');
+        restartBtn.disabled = true;
+        restartBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i> Restarting...';
+        
+        // Call restart endpoint
+        const response = await fetch('/api/settings/restart', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        if (response.ok) {
+            // Show success message
+            showAlert('Service restart initiated successfully. Please refresh the page in a few seconds.', 'success');
+            
+            // Auto-refresh after 5 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 5000);
+        } else {
+            throw new Error('Failed to restart service');
+        }
+        
+    } catch (error) {
+        console.error('Error restarting service:', error);
+        showAlert('Error restarting service: ' + error.message, 'danger');
+        
+        // Re-enable restart button
+        const restartBtn = document.getElementById('restartBtn');
+        restartBtn.disabled = false;
+        restartBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Restart Service';
+    }
+}
+
+// Check if restart button should be visible on page load
+function checkRestartButtonVisibility() {
+    // Check if any restart-required settings have been modified
+    const restartRequiredKeys = [
+        'server_host', 'server_port', 'server_debug',
+        'acestream_enabled', 'acestream_engine_host', 'acestream_engine_port',
+        'acestream_streaming_host', 'acestream_streaming_port',
+        'database_url', 'database_echo', 'database_pool_size', 'database_max_overflow'
+    ];
+    
+    // For now, hide the button by default
+    // It will be shown when user saves settings that require restart
+    document.getElementById('restartBtn').style.display = 'none';
 }
 </script>
 {% endblock %}
